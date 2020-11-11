@@ -32,7 +32,7 @@ define('LANGUAGE_CACHE_FILE', '/tmp/jobe_language_cache_file');
 
 
 class Restapi extends REST_Controller {
-
+    static $PORT_IDS =  [[3000, ''], [3001, ''], [3002, ''], [3003, ''], [3004, ''], [3005, ''], [3006, ''], [3007, ''], [3008, ''], [3009, ''], [3010, '']];
     protected $languages = array();
 
     // Constructor loads the available languages from the libraries directory.
@@ -104,9 +104,35 @@ class Restapi extends REST_Controller {
         if (FileCache::file_put_contents($fileId, $contents) === FALSE) {
             $this->error("put: failed to write file $fileId to cache", 500);
         }
+	
         $len = strlen($contents);
         $this->log('debug', "Put file $fileId, size $len");
         $this->response(NULL, 204);
+    }
+
+    // Put (i.e. create or update) a file
+    public function file_put($fileId=FALSE) {
+        if ($fileId === FALSE) {
+            $this->error('No file id in URL');
+        }
+        $contentsb64 = $this->put('file_contents', FALSE);
+        if ($contentsb64 === FALSE) {
+            $this->error('put: missing file_contents parameter');
+        }
+
+        $contents = base64_decode($contentsb64, TRUE);
+        if ($contents === FALSE) {
+            $this->error("put: contents of file $fileId are not valid base-64");
+        }
+
+        $dir = $this->put('dir', FALSE);
+        if (FileCache::vstavi_datoteko($fileId, $contents, $dir) === FALSE) {
+            $this->error("put: failed to write file $fileId to cache", 500);
+        }
+	
+        $len = strlen($contents);
+        $this->log('debug', "Put file $fileId, size $len");
+        $this->response('NEKINEKI ' . $dir, 201);
     }
 
 
@@ -126,6 +152,38 @@ class Restapi extends REST_Controller {
     // Post file
     public function files_post() {
         $this->error('file_post: not implemented on this server', 403);
+    }
+
+
+
+    // ****************************
+    //        STOP SERVER AT PORT
+    // ****************************
+    public function stop_get($port = FALSE) {
+        
+        if($port) {
+
+            $pid = shell_exec("sudo lsof -t -i:".$port);
+            //$this->response("sudo lsof -t -i:" . $port . " " . $port, 200);
+
+            if($pid){
+                $kill = shell_exec("sudo kill -9 " . $pid . " 2>&1");
+
+                if(!$kill)
+                    $this->response("Server uspešno ustavljen!", 200);
+                else
+                    $this->response("Prišlo je do napake pri ustavljanju serverja!", 400);
+            }
+            else {
+                $this->response("No server is running at port " . $port . "!", 400);
+            }
+            
+        }
+        else {
+            //Restapi::$PORT_IDS[0][1] = "BLA";
+            $this->response('Port number is missing! ' . Restapi::$PORT_IDS[0][1], 400);
+        }
+        
     }
 
     // ****************************
@@ -204,6 +262,8 @@ class Restapi extends REST_Controller {
         $debug = $this->config->item('debugging') ||
                 (isset($run->debug) && $run->debug);
 
+
+
         // Create the task.
         $this->task = new $reqdTaskClass($run->sourcefilename, $input, $params);
 
@@ -217,7 +277,7 @@ class Restapi extends REST_Controller {
 
                 $this->log('debug', "runs_post: compiling job {$this->task->id}");
                 $this->task->compile();
-
+                
                 if (empty($this->task->cmpinfo)) {
                     $this->log('debug', "runs_post: executing job {$this->task->id}");
                     $this->task->execute();
@@ -227,6 +287,7 @@ class Restapi extends REST_Controller {
                 // Delete task run directory unless it's a debug run
                 $this->task->close(!$debug);
             }
+
 
             // Success!
             $this->log('debug', "runs_post: returning 200 OK for task {$this->task->id}");

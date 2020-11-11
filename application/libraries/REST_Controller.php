@@ -883,6 +883,7 @@ abstract class REST_Controller extends CI_Controller {
         {
             // Display the data and exit execution
             $this->output->_display();
+
             exit;
         }
         else

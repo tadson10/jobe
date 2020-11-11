@@ -92,6 +92,43 @@ class FileCache {
         return $result;
     }
 
+    public static function vstavi_datoteko($fileid, $contents, $dir) {
+        //$saveDir = tempnam("/home/jobe/runs", "jobe_");
+        
+        
+        if (!mkdir('/home/jobe/runs/' . $dir) || !chmod('/home/jobe/runs/' . $dir, 0777)) {
+            log_message('error', 'LanguageTask constructor: error making temp directory');
+            throw new Exception("Task: error making temp directory (race error?)");
+        }
+        
+        /*if (!unlink('/home/jobe/runs/' . $dir) || !mkdir('/home/jobe/runs/' . $dir)) {
+            log_message('error', 'LanguageTask constructor: error making temp directory');
+            throw new Exception("Task: error making temp directory (race error?)");
+        }*/
+
+        $freespace = disk_free_space(FILE_CACHE_BASE);
+        $volumesize = disk_total_space(FILE_CACHE_BASE);
+        if (TESTING_FILE_CACHE_CLEAR || $freespace / $volumesize > MAX_PERCENT_FULL) {
+            self:: clean_cache();
+        }
+        if (preg_match(MD5_PATTERN, $fileid) !== 1) {
+            $result = @file_put_contents('/home/jobe/runs/' . $dir . '/' . $fileid, $contents);
+        } else {
+            $topdir = '/home/jobe/runs/' . $dir . '/' . substr($fileid, 0, 2);
+            $seconddir = $topdir . '/' . substr($fileid, 2, 2);
+            $fullpath = $seconddir . '/' . substr($fileid, 4);
+            if (!is_dir($topdir)) {
+                @mkdir($topdir, 0751);
+            }
+            if (!is_dir($seconddir)) {
+                @mkdir($seconddir, 0751);
+            }
+            $result = @file_put_contents($fullpath, $contents);
+        }
+        chmod('/home/jobe/runs/' . $dir . '/' . $fileid, 0777);
+        return $result;
+    }
+
     /**
      * Delete all files in the file cache that were last accessed over two
      * days ago.
