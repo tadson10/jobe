@@ -32,7 +32,7 @@ class Nodejs_Task extends Task {
         if (!copy($this->sourceFileName, $this->executableFileName)) {
             throw new exception("Node_Task: couldn't copy source file " . $this->sourceFileName . ', ' . $this->executableFileName);
         }
-        chmod('/home/jobe/runs/proba/test.js', 0777);
+        //chmod('/home/jobe/runs/proba/test.js', 0777);
     }
 
 
@@ -42,7 +42,7 @@ class Nodejs_Task extends Task {
     }
 
     public function getExecutablePath() {
-         return 'nodemon';
+         return 'node';
      }
 
 

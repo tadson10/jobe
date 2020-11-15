@@ -94,9 +94,16 @@ class FileCache {
 
     public static function vstavi_datoteko($fileid, $contents, $dir) {
         //$saveDir = tempnam("/home/jobe/runs", "jobe_");
+        //Preverimo, ali že direktorij obstaja, in ga ustvarimo, če še ne obstaja
+        $d = true;
+        $c = true;
+        $dirObstaja = is_dir('/home/jobe/runs/' . $dir);
+        if(!$dirObstaja) {
+            $d = mkdir('/home/jobe/runs/' . $dir);
+            $c = chmod('/home/jobe/runs/' . $dir, 0777);
+        }
         
-        
-        if (!mkdir('/home/jobe/runs/' . $dir) || !chmod('/home/jobe/runs/' . $dir, 0777)) {
+        if (!$d || !$c) {
             log_message('error', 'LanguageTask constructor: error making temp directory');
             throw new Exception("Task: error making temp directory (race error?)");
         }
@@ -125,7 +132,7 @@ class FileCache {
             }
             $result = @file_put_contents($fullpath, $contents);
         }
-        chmod('/home/jobe/runs/' . $dir . '/' . $fileid, 0777);
+        //chmod('/home/jobe/runs/' . $dir . '/' . $fileid, 0777);
         return $result;
     }
 

@@ -126,13 +126,16 @@ class Restapi extends REST_Controller {
         }
 
         $dir = $this->put('dir', FALSE);
+        $port = $this->put('port', FALSE);
+        $rnd = $this->put('randomValue', FALSE);
+
         if (FileCache::vstavi_datoteko($fileId, $contents, $dir) === FALSE) {
             $this->error("put: failed to write file $fileId to cache", 500);
         }
 	
         $len = strlen($contents);
         $this->log('debug', "Put file $fileId, size $len");
-        $this->response('NEKINEKI ' . $dir, 201);
+        $this->response('NEKINEKI ' . $dir . ', ' . $port . ', ' . $rnd, 201);
     }
 
 
@@ -316,6 +319,47 @@ class Restapi extends REST_Controller {
         $this->error('runresults_get: unimplemented, as all submissions run immediately.', 404);
     }
 
+    // **********************
+    //      FREE_PORTS
+    // **********************
+    //Funkcija iz množice možnih portov vrne prvi neuporabljen port
+    public function free_ports_get() {
+        //chdir('/home/jobe/runs');
+        $dir = dir('/home/jobe/runs');
+        $porti = [[3000, false], [3001, false], [3002, false], [3003, false], [3004, false], [3005, false], [3006, false], [3007, false], [3008, false], [3009, false]];
+        $tmp = '';
+        //Dobimo vse poddirektorije
+        while (false !== ($entry = $dir->read())) {
+            
+            $array = explode("_", $entry);
+            $port = intval($array[0]);
+            $tmp = $tmp  . ', '. $port;
+            //Shranimo port kot že uporabljen
+            if($port != 0) {
+                $porti[$port - 3000][1] = true;
+            }
+        }
+
+        //Najdemo prvi neuporabljen port
+        $port = null;
+        for($i = 0; $i < count($porti); $i++) {
+            if(!$porti[$i][1]) {
+                $port = $porti[$i][0];
+                break;
+            }
+        }
+        $odgovor = array("sporocilo" => '', "port" => null);
+        
+        //Ne najdemo prostega porta
+        if(is_null($port)) {
+            $odgovor["sporocilo"] = 'No ports are available at the moment, please try again later!';
+            $this->response($odgovor, 404);
+        }
+
+        //vrnemo prosti port
+        $odgovor["port"] = $port;
+        $this->response($odgovor, 200);
+    }
 
     // **********************
     //      LANGUAGES
