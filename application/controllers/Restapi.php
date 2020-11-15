@@ -326,7 +326,11 @@ class Restapi extends REST_Controller {
     public function free_ports_get() {
         //chdir('/home/jobe/runs');
         $dir = dir('/home/jobe/runs');
-        $porti = [[3000, false], [3001, false], [3002, false], [3003, false], [3004, false], [3005, false], [3006, false], [3007, false], [3008, false], [3009, false]];
+        $porti = [];
+        for($i = 0; $i < 20; $i++) {
+            $porti[$i] = [3000 + $i, false];
+        }
+        //$porti = [[3000, false], [3001, false], [3002, false], [3003, false], [3004, false], [3005, false], [3006, false], [3007, false], [3008, false], [3009, false]];
         $tmp = '';
         //Dobimo vse poddirektorije
         while (false !== ($entry = $dir->read())) {
@@ -357,7 +361,7 @@ class Restapi extends REST_Controller {
         }
 
         //vrnemo prosti port
-        $odgovor["port"] = $port;
+        $odgovor["port"] = $port ;
         $this->response($odgovor, 200);
     }
 
