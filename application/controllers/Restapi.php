@@ -110,6 +110,7 @@ class Restapi extends REST_Controller {
         $this->response(NULL, 204);
     }
 
+    //TadejS
     // Put (i.e. create or update) a file
     public function file_put($fileId=FALSE) {
         if ($fileId === FALSE) {
@@ -274,7 +275,7 @@ class Restapi extends REST_Controller {
         // to clean up the task with close() before handling the exception.
         try {
             try {
-                $this->task->prepare_execution_environment($run->sourcecode);
+                $this->task->prepare_execution_environment($run->sourcecode, $run);
 
                 $this->task->load_files($files);
 

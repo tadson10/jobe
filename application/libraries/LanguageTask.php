@@ -104,26 +104,25 @@ abstract class Task {
     // server user is) and has access rights of 771. If it's readable by
     // any of the jobe<n> users, running programs will be able
     // to hoover up other students' submissions.
-    public function prepare_execution_environment($sourceCode) {
+    public function prepare_execution_environment($sourceCode, $run = NULL) {
         // Create the temporary directory that will be used.
-        //$this->workdir = "/home/jobe/runs/proba";
-        $this->workdir = tempnam("/home/jobe/runs", "jobe_");
-//log_message('error', 'LanguageTask constructor: error making temp directory ' . $this->workdir);
-//throw new Exception("Task: error making temp directory (race error?) " . $this->workdir);
+        $this->workdir = "/home/jobe/runs/".$run->dir;
+        /*$this->workdir = tempnam("/home/jobe/runs", "jobe_");
+
         if (!unlink($this->workdir) || !mkdir($this->workdir)) {
             log_message('error', 'LanguageTask constructor: error making temp directory');
             throw new Exception("Task: error making temp directory (race error?)");
-        }
+        }*/
         chdir($this->workdir);
 
         $this->id = basename($this->workdir);
 
         // Save the source there.
-        if (empty($this->sourceFileName)) {
+        /*if (empty($this->sourceFileName)) {
             $this->sourceFileName = $this->defaultFileName($sourceCode);
         }
         file_put_contents($this->workdir . '/' . $this->sourceFileName, $sourceCode);
-
+*/
         // Allocate one of the Jobe users.
         $this->userId = $this->getFreeUser();
         $this->user = sprintf("jobe%02d", $this->userId);
