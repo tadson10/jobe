@@ -325,6 +325,22 @@ class Restapi extends REST_Controller {
     // **********************
     //Funkcija iz množice možnih portov vrne prvi neuporabljen port
     public function free_ports_get() {
+        
+        // $task->freeUser(0);
+        // $task->freeUser(1);
+        // $task->freeUser(2);
+        // $task->freeUser(3);
+
+        // Pridobimo JOBE userja
+        require_once($this->get_path_for_language_task('nodejs'));
+        // Create the task.
+        $task = new Nodejs_Task("proba", "", "");
+
+        // Allocate one of the Jobe users.
+        $userId = $task->getFreeUser();
+        $jobeUser = sprintf("jobe%02d", $userId);
+
+
         //chdir('/home/jobe/runs');
         $dir = dir('/home/jobe/runs');
         $porti = [];
@@ -353,7 +369,7 @@ class Restapi extends REST_Controller {
                 break;
             }
         }
-        $odgovor = array("sporocilo" => '', "port" => null);
+        $odgovor = array("sporocilo" => '', "port" => null, "jobeUser" => null);
         
         //Ne najdemo prostega porta
         if(is_null($port)) {
@@ -362,7 +378,8 @@ class Restapi extends REST_Controller {
         }
 
         //vrnemo prosti port
-        $odgovor["port"] = $port ;
+        $odgovor["port"] = $port;
+        $odgovor["jobeUser"] = $jobeUser;
         $this->response($odgovor, 200);
     }
 
