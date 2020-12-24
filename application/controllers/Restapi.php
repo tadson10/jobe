@@ -201,7 +201,7 @@ class Restapi extends REST_Controller {
         $randomValue = $this->post('randomValue', FALSE);
 
         $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
-        // $this->response($userSM, 403);
+        // $this->response($port, 403);
 
         // Reservation doesn't exist
         if(!$userSM) {
@@ -450,7 +450,7 @@ class Restapi extends REST_Controller {
         if($userSM)
             $isOldUser = true;
 
-            //  $this->response($userSM, 201);
+            //  $this->response($userSM, 202);
 
         // get API KEY from header
         /*$header = apache_request_headers(); 
@@ -605,17 +605,18 @@ class Restapi extends REST_Controller {
     private function getJobeUser($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE, $checkCred = TRUE) {
         $userSM = false;
 
-        if(!$port || !$jobeUser || !$randomValue)
+        // if checkCred is TRUE and user didn't send any of the credentials, we return FALSE
+        if($checkCred && (!$port || !$jobeUser || !$randomValue))
             return $userSM;
         
         
         // get API KEY from header
         $header = apache_request_headers(); 
-        // $this->response($userSM, 201);
 
         $apiKey = $header["X-API-KEY"];
         //Check if port is already reserved
         $userSM = $this->getJobeUserByApiKeyAndCredentials($apiKey, $port, $jobeUser, $randomValue, $checkCred);
+        // $this->response($userSM, 201);
         
         return $userSM;
     }
