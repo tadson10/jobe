@@ -235,7 +235,7 @@ abstract class Task {
                 if (!$active[$user][0]) {
                     // nakljucna vrednost
                     $str=rand(); 
-                    $nakljucnaVrednost = md5($str);
+                    $randomValue = md5($str);
 
                     // Najdemo nakljucen neuporabljen port
                     $port = $this->generirajNakljucenPort($active);
@@ -243,7 +243,7 @@ abstract class Task {
                     if($port) {
                         $active[$user][0] = TRUE;
                         $active[$user][1] = time() + 60*60;
-                        $active[$user][2] = $nakljucnaVrednost;
+                        $active[$user][2] = $randomValue;
                         $active[$user][3] = $apiKey;
                         $active[$user][4] = sprintf("jobe%02d", $user);
                         $active[$user][5] = $port;
