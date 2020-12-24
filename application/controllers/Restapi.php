@@ -114,14 +114,14 @@ class Restapi extends REST_Controller {
     //TadejS
     // Put (i.e. create or update) a file
     public function file_put($fileId=FALSE) {
-        $response = array("message" => '', "port" => null, "jobeUser" => null, "nakljucnaVrednost" => null);
+        $response = array("message" => '', "port" => null, "jobeUser" => null, "randomValue" => null);
         
         // Check PORT reservation
         $port = $this->put("port", FALSE);
-        $randomValue = $this->put("nakljucnaVrednost", FALSE);
+        $randomValue = $this->put("randomValue", FALSE);
         $jobeUser = $this->put("jobeUser", FALSE);
 
-        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue);
+        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
         // $this->response($randomValue, 403);
         
         // Reservation doesn't exist
@@ -129,7 +129,7 @@ class Restapi extends REST_Controller {
             $response["message"] = "Reservation expired. Please reserve JOBE user and try again.";
             $response["port"] = $port;
             $response["jobeUser"] = $jobeUser;
-            $response["nakljucnaVrednost"] = $randomValue;
+            $response["randomValue"] = $randomValue;
     
             $this->response($response, 403);
         }
@@ -198,9 +198,9 @@ class Restapi extends REST_Controller {
         // Check PORT reservation
         $port = $this->post('port', FALSE);
         $jobeUser = $this->post('jobeUser', FALSE);
-        $randomValue = $this->post('nakljucnaVrednost', FALSE);
+        $randomValue = $this->post('randomValue', FALSE);
 
-        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue);
+        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
         // $this->response($userSM, 403);
 
         // Reservation doesn't exist
@@ -208,7 +208,7 @@ class Restapi extends REST_Controller {
             $odgovor["message"] = "Reservation expired. Please reserve JOBE user and try again.";
             $odgovor["port"] = $port;
             $odgovor["jobeUser"] = $jobeUser;
-            $odgovor["nakljucnaVrednost"] = $randomValue;
+            $odgovor["randomValue"] = $randomValue;
 
             $this->response($odgovor, 403);
         }
@@ -270,14 +270,14 @@ class Restapi extends REST_Controller {
         // $this->response($tmp, 400);
         $port = $tmp["port"];
         $jobeUser = $tmp["jobeUser"];
-        $randomValue = $tmp["nakljucnaVrednost"];
+        $randomValue = $tmp["randomValue"];
 
-        // $ustrezniPodatki = $this->preveriUstreznostPodatkov($port, $jobeUser, $nakljucnaVrednost);
+        // $ustrezniPodatki = $this->preveriUstreznostPodatkov($port, $jobeUser, $randomValue);
         // if(!$ustrezniPodatki)
         //     $this->response("Reservation of port " . $port . " expired. Please, reserve another port.", 400);
 
         // Check if PORT reservation is valid
-        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue);
+        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
 
         
         // Reservation doesn't exist
@@ -285,7 +285,7 @@ class Restapi extends REST_Controller {
             $odgovor["message"] = "Reservation expired. Please reserve JOBE user and try again.";
             $odgovor["port"] = $port;
             $odgovor["jobeUser"] = $jobeUser;
-            $odgovor["nakljucnaVrednost"] = $randomValue;
+            $odgovor["randomValue"] = $randomValue;
     
             $this->response($odgovor, 403);
         }
@@ -435,17 +435,17 @@ class Restapi extends REST_Controller {
         //     $ip = $_SERVER['REMOTE_ADDR'];
         // }
         
-        $odgovor = array("message" => '', "port" => null, "jobeUser" => null, "nakljucnaVrednost" => null);
+        $odgovor = array("message" => '', "port" => null, "jobeUser" => null, "randomValue" => null);
         $apiKey = null;
         $isOldUser = false;
 
         $port = $this->post("port");
-        $randomValue = $this->post("nakljucnaVrednost");
+        $randomValue = $this->post("randomValue");
         $jobeUser = $this->post("jobeUser");
 
         // Check if all ports are used and remove those with expired reservation
         $array = $this->findAndRemoveExpiredPortReservations();
-        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue);
+        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, FALSE);
         // We founnd reserved port for this user
         if($userSM)
             $isOldUser = true;
@@ -461,7 +461,7 @@ class Restapi extends REST_Controller {
         if($apiKeyExists) {
             $apiKey = $header["X-API-KEY"];
             //Check if port is already reserved
-            $userSM = $this->getJobeUserByApiKey($apiKey);
+            $userSM = $this->getJobeUserByApiKeyAndCredentials($apiKey);
             
         }
         else {
@@ -532,7 +532,7 @@ class Restapi extends REST_Controller {
             // $odgovor["message"] =  ;
             $odgovor["port"] = $port;
             $odgovor["jobeUser"] = $jobeUser;
-            $odgovor["nakljucnaVrednost"] = $randomValue;             
+            $odgovor["randomValue"] = $randomValue;             
             $this->response($odgovor, 200);
             // $this->response(implode(' | ', array_map('implode', $array, array_fill(0, count($array), ','))), 200);
         }
@@ -602,43 +602,20 @@ class Restapi extends REST_Controller {
     }
 
     // Check if user for this API KEY and credentials already exists
-    private function getJobeUser($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE) {
+    private function getJobeUser($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE, $checkCred = TRUE) {
         $userSM = false;
 
-        // if(!$port || !$jobeUser || !$randomValue)
-        //     return $userSM;
+        if(!$port || !$jobeUser || !$randomValue)
+            return $userSM;
         
         
         // get API KEY from header
         $header = apache_request_headers(); 
-            //  $this->response($header, 500);
-        
-        $apiKeyExists = array_key_exists("X-API-KEY", $header);
         // $this->response($userSM, 201);
 
-        // If API KEY exists, we check if reservation exists for this api key
-        // API KEY is used only when there is API KEY authorization enabled
-        if($apiKeyExists && $this->config->item('rest_enable_keys')) {
-            $apiKey = $header["X-API-KEY"];
-            //Check if port is already reserved
-            $userSM = $this->getJobeUserByApiKey($apiKey);
-            
-        }
-        else {
-            // TREBA PREGLEDATI, ALI OBSTAJA REZERVACIJO ZA KOMBINACIJO jobeUser_port_naključnaVrednost!
-            // Pregledamo, ali je uporabnik v BODY poslal tudi port in nakljucno vrednost
-            // $port = $this->post("port");
-            // $randomValue = $this->post("randomValue");
-            // $jobeUser = $this->post("jobeUser");
-
-            //Check if port is already reserved for CREDENTIALS
-            if($port && $randomValue && $jobeUser)
-                $userSM = $this->getJobeUserByCredentials($port, $jobeUser, $randomValue);
-            // $this->response($userSM, 201);
-
-        }
-        // $this->response($port, 500);
-       
+        $apiKey = $header["X-API-KEY"];
+        //Check if port is already reserved
+        $userSM = $this->getJobeUserByApiKeyAndCredentials($apiKey, $port, $jobeUser, $randomValue, $checkCred);
         
         return $userSM;
     }
@@ -699,7 +676,8 @@ class Restapi extends REST_Controller {
     }
 
     // Returns save credentials for JOBE user from SHARED MEMORY for this `API KEY`
-    private function getJobeUserByApiKey($apiKey = FALSE) {
+    // $checkCred tells us if we have to check CREDENTIALS (when getting free port, we don't have to. But in every other situation we have to check it!)
+    private function getJobeUserByApiKeyAndCredentials($apiKey = FALSE, $port = FALSE, $jobeUser = FALSE, $randomValue = FALSE, $checkCred = TRUE) {
         global $CI;
 
         if(!$apiKey)
@@ -719,7 +697,7 @@ class Restapi extends REST_Controller {
         $numUsers = $CI->config->item('jobe_max_users');
 
         for($i = 0; $i < $numUsers; $i++) {
-            if($active[$i][3] == $apiKey) {
+            if($active[$i][3] == $apiKey && (!$checkCred || ($checkCred && $active[$i][5] == $port && $active[$i][4] == $jobeUser && $active[$i][2] == $randomValue))) {
                 // add index to object
                 $tmp = $active[$i];
                 $tmp[6] = $i;
@@ -857,15 +835,15 @@ class Restapi extends REST_Controller {
     //     return $port;
     // }
 
-    // public function preveriUstreznostPodatkov($port = FALSE, $jobeUser = FALSE, $nakljucnaVrednost = FALSE) {
-    //     if(!$port || !$jobeUser || !$nakljucnaVrednost)
+    // public function preveriUstreznostPodatkov($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE) {
+    //     if(!$port || !$jobeUser || !$randomValue)
     //         return FALSE;
 
     //     //chdir('/home/jobe/runs');
     //     $dir = dir('/home/jobe/runs');
     //     $porti = [];
         
-    //     $iskaniDir = $port . "_" . $jobeUser . "_" . $nakljucnaVrednost;
+    //     $iskaniDir = $port . "_" . $jobeUser . "_" . $randomValue;
     //     //Dobimo vse poddirektorije
     //     while (false !== ($entry = $dir->read())) {
     //         if(strcmp($entry, $iskaniDir) == 0)
