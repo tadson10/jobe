@@ -92,21 +92,25 @@ class FileCache {
         return $result;
     }
 
-    public static function vstavi_datoteko($fileid, $contents, $dir) {
+    // TadejS
+    public static function save_file($fileid, $contents, $dir) {
         //$saveDir = tempnam("/home/jobe/runs", "jobe_");
         //Preverimo, ali že direktorij obstaja, in ga ustvarimo, če še ne obstaja
-        $d = true;
-        $c = true;
-        $dirObstaja = is_dir('/home/jobe/runs/' . $dir);
-        if(!$dirObstaja) {
-            $d = mkdir('/home/jobe/runs/' . $dir);
-            $c = chmod('/home/jobe/runs/' . $dir, 0777);
-        }
-        
-        if (!$d || !$c) {
-            log_message('error', 'LanguageTask constructor: error making temp directory');
+        // $d = true;
+        // $c = true;
+
+        // Directory MUST exist at this moment, if we want to save file
+        $dirExists = is_dir('/home/jobe/runs/' . $dir);
+        if(!$dirExists) {
+            // $d = mkdir('/home/jobe/runs/' . $dir);
+            // $c = chmod('/home/jobe/runs/' . $dir, 0777);
             throw new Exception("Task: error making temp directory (race error?)");
         }
+        
+        // if (!$d || !$c) {
+        //     log_message('error', 'LanguageTask constructor: error making temp directory');
+        //     throw new Exception("Task: error making temp directory (race error?)");
+        // }
         
         /*if (!unlink('/home/jobe/runs/' . $dir) || !mkdir('/home/jobe/runs/' . $dir)) {
             log_message('error', 'LanguageTask constructor: error making temp directory');

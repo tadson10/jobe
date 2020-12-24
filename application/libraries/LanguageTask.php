@@ -40,7 +40,7 @@ abstract class Task {
     public $default_params = array(
         'disklimit'     => 20,      // MB (for normal files)
         'streamsize'    => 2,       // MB (for stdout/stderr)
-        'cputime'       => 60,       // secs
+        'cputime'       => 20,       // secs
         'memorylimit'   => 500,     // MB
         'numprocs'      => 20,
         'compileargs'   => array(),
@@ -104,9 +104,10 @@ abstract class Task {
     // server user is) and has access rights of 771. If it's readable by
     // any of the jobe<n> users, running programs will be able
     // to hoover up other students' submissions.
-    public function prepare_execution_environment($sourceCode, $run = NULL) {
+    public function prepare_execution_environment($sourceCode, $userSm = NULL) {
+
         // Create the temporary directory that will be used.
-        $this->workdir = "/home/jobe/runs/".$run->dir;
+        $this->workdir = "/home/jobe/runs/".$userSm[4]."_".$userSm[5]."_".$userSm[2];
         /*$this->workdir = tempnam("/home/jobe/runs", "jobe_");
 
         if (!unlink($this->workdir) || !mkdir($this->workdir)) {
@@ -124,8 +125,10 @@ abstract class Task {
         file_put_contents($this->workdir . '/' . $this->sourceFileName, $sourceCode);
 */
         // Allocate one of the Jobe users.
-        $this->userId = $this->getFreeUser();
-        $this->user = sprintf("jobe%02d", $this->userId);
+        // $this->userId = $this->getFreeUser();
+        // $this->userId = 3000 - $run->port;
+        // $this->user = sprintf("jobe%02d", $this->userId);
+        $this->user = $userSm[4];
 
         // Give the user RW access.
         exec("setfacl -m u:{$this->user}:rwX {$this->workdir}");
@@ -180,16 +183,16 @@ abstract class Task {
         if ($this->userId !== null) {
             exec("sudo /usr/bin/pkill -9 -u {$this->user}"); // Kill any remaining processes
             $this->removeTemporaryFiles($this->user);
-            $this->freeUser($this->userId);
+            // $this->freeUser($this->userId);
             $this->userId = null;
             $this->user = null;
         }
 
-        if ($deleteFiles && $this->workdir) {
+        /*if ($deleteFiles && $this->workdir) {
             $dir = $this->workdir;
             exec("sudo rm -R $dir");
             $this->workdir = null;
-        }
+        }*/
     }
 
     // ************************************************
@@ -203,7 +206,7 @@ abstract class Task {
     // second then retries, up to a maximum of MAX_RETRIES retries.
     // Throws OverloadException if a free user cannot be found, otherwise
     // returns an integer in the range 0 to jobe_max_users - 1 inclusive.
-    private function getFreeUser() {
+    public function getFreeUser($apiKey = NULL) {
         global $CI;
 
         $numUsers = $CI->config->item('jobe_max_users');
@@ -218,15 +221,40 @@ abstract class Task {
                 // First time since boot -- initialise active list
                 $active = array();
                 for($i = 0; $i < $numUsers; $i++) {
-                    $active[$i] = FALSE;
+                    $active[$i][0] = FALSE;
+                    $active[$i][1] = null;
+                    $active[$i][2] = null;
+                    $active[$i][3] = null;
+                    $active[$i][4] = null;
+                    $active[$i][5] = null;
                 }
                 shm_put_var($shm, ACTIVE_USERS, $active);
             }
             $active = shm_get_var($shm, ACTIVE_USERS);
             for ($user = 0; $user < $numUsers; $user++) {
-                if (!$active[$user]) {
-                    $active[$user] = TRUE;
-                    shm_put_var($shm, ACTIVE_USERS, $active);
+                if (!$active[$user][0]) {
+                    // nakljucna vrednost
+                    $str=rand(); 
+                    $nakljucnaVrednost = md5($str);
+
+                    // Najdemo nakljucen neuporabljen port
+                    $port = $this->generirajNakljucenPort($active);
+                    // Če ga najdemo
+                    if($port) {
+                        $active[$user][0] = TRUE;
+                        $active[$user][1] = time() + 60*60;
+                        $active[$user][2] = $nakljucnaVrednost;
+                        $active[$user][3] = $apiKey;
+                        $active[$user][4] = sprintf("jobe%02d", $user);
+                        $active[$user][5] = $port;
+                        shm_put_var($shm, ACTIVE_USERS, $active);
+                    }
+                    else {
+                        shm_detach($shm);
+                        sem_release($sem);
+                        throw new OverloadException();
+                    }
+                    
                     break;
                 }
             }
@@ -242,18 +270,45 @@ abstract class Task {
                 }
             }
         }
-        return $user;
+        return $active[$user];
     }
 
+    // Preveri, ali port uporablja že kdo drug
+    private function preveriPort($active = FALSE, $port) {
+        for($i = 0; $i < count($active); $i++) {
+            if($active[$i][5] == $port)
+                return false;
+        }
+        return true;
+
+    }
+
+    // Generira naključen neuporabljen port
+    private function generirajNakljucenPort($active) {
+        // Če v 2 poskusih ne dobimo porta, vrnemo FALSE
+        for($i = 0; $i < 2; $i++) {
+            $port = rand(3000, 3200);
+            $jePortOk = $this->preveriPort($active, $port);
+
+            if($jePortOk)
+                return $port;
+        }
+        return false;
+    }
 
     // Mark the given user number (0 to jobe_max_users - 1) as free.
-    private function freeUser($userNum) {
+    public function freeUser($userNum) {
         $key = ftok(__FILE__, 'j');
         $sem = sem_get($key);
         sem_acquire($sem);
         $shm = shm_attach($key);
         $active = shm_get_var($shm, ACTIVE_USERS);
-        $active[$userNum] = FALSE;
+        $active[$userNum][0] = FALSE;
+        $active[$userNum][1] = null;
+        $active[$userNum][2] = null;
+        $active[$userNum][3] = null;
+        $active[$userNum][4] = null;
+        $active[$userNum][5] = null;
         shm_put_var($shm, ACTIVE_USERS, $active);
         shm_detach($shm);
         sem_release($sem);
