@@ -42,7 +42,7 @@ class Nodejs_Task extends Task {
     }
 
     public function getExecutablePath() {
-         return 'node';
+         return '/usr/bin/nodejs';
      }
 
 

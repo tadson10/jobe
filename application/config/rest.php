@@ -312,20 +312,20 @@ $config['rest_keys_table'] = 'keys';
 | column name see 'rest_key_column'
 |
 | Default table schema:
-|   CREATE TABLE `keys` (
-|       `id` INT(11) NOT NULL AUTO_INCREMENT,
-|       `user_id` INT(11) NOT NULL,
-|       `key` VARCHAR(40) NOT NULL,
-|       `level` INT(2) NOT NULL,
-|       `ignore_limits` TINYINT(1) NOT NULL DEFAULT '0',
-|       `is_private_key` TINYINT(1)  NOT NULL DEFAULT '0',
-|       `ip_addresses` TEXT NULL DEFAULT NULL,
-|       `date_created` INT(11) NOT NULL,
-|       PRIMARY KEY (`id`)
-|   ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+   CREATE TABLE `keys` (
+       `id` INT(11) NOT NULL AUTO_INCREMENT,
+       `user_id` INT(11) NOT NULL,
+       `key` VARCHAR(40) NOT NULL,
+       `level` INT(2) NOT NULL,
+       `ignore_limits` TINYINT(1) NOT NULL DEFAULT '0',
+       `is_private_key` TINYINT(1)  NOT NULL DEFAULT '0',
+       `ip_addresses` TEXT NULL DEFAULT NULL,
+       `date_created` INT(11) NOT NULL,
+       PRIMARY KEY (`id`)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 |
 */
-$config['rest_enable_keys'] = FALSE;
+$config['rest_enable_keys'] = TRUE;
 
 /*
 |--------------------------------------------------------------------------

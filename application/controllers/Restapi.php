@@ -383,7 +383,7 @@ class Restapi extends REST_Controller {
                 
                 if (empty($this->task->cmpinfo)) {
                     $this->log('debug', "runs_post: executing job {$this->task->id}");
-                    $this->task->execute();
+                    $this->task->execute($run);
                 }
 
             } finally {
@@ -647,6 +647,20 @@ class Restapi extends REST_Controller {
         $sem = sem_get($key);
         sem_acquire($sem);
         $shm = shm_attach($key);
+        
+        if (!shm_has_var($shm, ACTIVE_USERS)) {
+            // First time since boot -- initialise active list
+            $active = array();
+            for($i = 0; $i < $numUsers; $i++) {
+                $active[$i][0] = FALSE;
+                $active[$i][1] = null;
+                $active[$i][2] = null;
+                $active[$i][3] = null;
+                $active[$i][4] = null;
+                $active[$i][5] = null;
+            }
+            shm_put_var($shm, ACTIVE_USERS, $active);
+        }
         $active = shm_get_var($shm, ACTIVE_USERS);
 
         // Check if all JOBE users are taken

@@ -159,9 +159,12 @@ abstract class Task {
 
 
     // Execute this task, which must already have been compiled if necessary
-    public function execute() {
+    public function execute($run) {
         try {
-            $cmd = implode(' ', $this->getRunCommand());
+            $cmd = "";
+            if($run->language_id == "nodejs")
+                $cmd = 'PORT='.$run->port.' ';
+            $cmd = $cmd . implode(' ', $this->getRunCommand());
             list($this->stdout, $this->stderr) = $this->run_in_sandbox($cmd, false, $this->input);
             $this->stderr = $this->filteredStderr();
             $this->diagnose_result();  // Analyse output and set result
