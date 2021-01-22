@@ -32,7 +32,7 @@
  * @copyright  2019 Richard Lobb, University of Canterbury
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
+define('FILE_RUN_BASE', '/home/jobe/runs');
 define('FILE_CACHE_BASE', '/home/jobe/files');
 define('MD5_PATTERN', '/[0-9abcdef]{32}/');
 define('MAX_PERCENT_FULL', 0.95);
@@ -73,7 +73,7 @@ class FileCache {
         $freespace = disk_free_space(FILE_CACHE_BASE);
         $volumesize = disk_total_space(FILE_CACHE_BASE);
         if (TESTING_FILE_CACHE_CLEAR || $freespace / $volumesize > MAX_PERCENT_FULL) {
-            self:: clean_cache();
+            self:: clean_cache(FILE_CACHE_BASE);
         }
         if (preg_match(MD5_PATTERN, $fileid) !== 1) {
             $result = @file_put_contents(FILE_CACHE_BASE . '/' . $fileid, $contents);
@@ -94,49 +94,19 @@ class FileCache {
 
     // TadejS
     public static function save_file($fileid, $contents, $dir) {
-        //$saveDir = tempnam("/home/jobe/runs", "jobe_");
-        //Preverimo, ali že direktorij obstaja, in ga ustvarimo, če še ne obstaja
-        // $d = true;
-        // $c = true;
 
-        // Directory MUST exist at this moment, if we want to save file
+        // Check if directory exist and make dir
         $dirExists = is_dir('/home/jobe/runs/' . $dir);
         if(!$dirExists) {
-            // $d = mkdir('/home/jobe/runs/' . $dir);
-            // $c = chmod('/home/jobe/runs/' . $dir, 0777);
-            throw new Exception("Task: error making temp directory (race error?)");
+            mkdir('/home/jobe/runs/' . $dir);
         }
         
-        // if (!$d || !$c) {
-        //     log_message('error', 'LanguageTask constructor: error making temp directory');
-        //     throw new Exception("Task: error making temp directory (race error?)");
-        // }
-        
-        /*if (!unlink('/home/jobe/runs/' . $dir) || !mkdir('/home/jobe/runs/' . $dir)) {
-            log_message('error', 'LanguageTask constructor: error making temp directory');
-            throw new Exception("Task: error making temp directory (race error?)");
-        }*/
-
-        $freespace = disk_free_space(FILE_CACHE_BASE);
-        $volumesize = disk_total_space(FILE_CACHE_BASE);
+        $freespace = disk_free_space(FILE_RUN_BASE);
+        $volumesize = disk_total_space(FILE_RUN_BASE);
         if (TESTING_FILE_CACHE_CLEAR || $freespace / $volumesize > MAX_PERCENT_FULL) {
-            self:: clean_cache();
+            self:: clean_cache(FILE_RUN_BASE);
         }
-        if (preg_match(MD5_PATTERN, $fileid) !== 1) {
             $result = @file_put_contents('/home/jobe/runs/' . $dir . '/' . $fileid, $contents);
-        } else {
-            $topdir = '/home/jobe/runs/' . $dir . '/' . substr($fileid, 0, 2);
-            $seconddir = $topdir . '/' . substr($fileid, 2, 2);
-            $fullpath = $seconddir . '/' . substr($fileid, 4);
-            if (!is_dir($topdir)) {
-                @mkdir($topdir, 0751);
-            }
-            if (!is_dir($seconddir)) {
-                @mkdir($seconddir, 0751);
-            }
-            $result = @file_put_contents($fullpath, $contents);
-        }
-        //chmod('/home/jobe/runs/' . $dir . '/' . $fileid, 0777);
         return $result;
     }
 
@@ -167,9 +137,9 @@ class FileCache {
      * check file existence need to be prepared to re-upload files in the event
      * of a 404 Not Found.
      */
-    public static function clean_cache() {
+    public static function clean_cache($path) {
         log_message('info', '*jobe*: cleaning file cache');
-        @shell_exec("find " . FILE_CACHE_BASE . " -type f -atime +1 -delete &> /dev/null &");
+        @shell_exec("find " . $path . " -type f -atime +1 -delete &> /dev/null &");
     }
 
 

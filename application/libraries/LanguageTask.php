@@ -41,7 +41,7 @@ abstract class Task {
         'disklimit'     => 20,      // MB (for normal files)
         'streamsize'    => 2,       // MB (for stdout/stderr)
         'cputime'       => 20,       // secs
-        'memorylimit'   => 500,     // MB
+        'memorylimit'   => 200,     // MB
         'numprocs'      => 20,
         'compileargs'   => array(),
         'linkargs'      => array(),
@@ -60,6 +60,8 @@ abstract class Task {
         'memorylimit'   => 200,     // MB
         'numprocs'      => 5        // processes
     );
+
+    public $maxTimelimit = 600;
 
     public $id;             // The task id - use the workdir basename
     public $input;          // Stdin for this task
@@ -104,7 +106,7 @@ abstract class Task {
     // server user is) and has access rights of 771. If it's readable by
     // any of the jobe<n> users, running programs will be able
     // to hoover up other students' submissions.
-    public function prepare_execution_environment($sourceCode, $userSm = NULL) {
+    public function prepare_execution_environment($userSm = NULL) {
 
         // Create the temporary directory that will be used.
         $this->workdir = "/home/jobe/runs/".$userSm[4]."_".$userSm[5]."_".$userSm[2];
@@ -165,7 +167,10 @@ abstract class Task {
             if($run->language_id == "nodejs")
                 $cmd = 'PORT='.$run->port.' ';
             $cmd = $cmd . implode(' ', $this->getRunCommand());
-            list($this->stdout, $this->stderr) = $this->run_in_sandbox($cmd, false, $this->input);
+            
+            $timelimit = $run->timelimit;
+
+            list($this->stdout, $this->stderr) = $this->run_in_sandbox($cmd, false, $this->input, $timelimit);
             $this->stderr = $this->filteredStderr();
             $this->diagnose_result();  // Analyse output and set result
         }
@@ -331,11 +336,17 @@ abstract class Task {
      * @return array a two element array of the standard output and the standard error
      * from running the given command.
      */
-    public function run_in_sandbox($wrappedCmd, $iscompile=true, $stdin=null) {
+    public function run_in_sandbox($wrappedCmd, $iscompile=true, $stdin=null, $timelimit=FALSE) {
+        // Limit max timelimit
+        if($timelimit) {
+            if($timelimit > $this->maxTimelimit)
+                $timelimit = $this->maxTimelimit / 2;
+        }
+
         $filesize = 1000 * $this->getParam('disklimit', $iscompile); // MB -> kB
         $streamsize = 1000 * $this->getParam('streamsize', $iscompile); // MB -> kB
         $memsize = 1000 * $this->getParam('memorylimit', $iscompile);
-        $cputime = $this->getParam('cputime', $iscompile);
+        $cputime = $timelimit ? $timelimit : $this->getParam('cputime', $iscompile);
         $killtime = 2 * $cputime; // Kill the job after twice the allowed cpu time
         $numProcs = $this->getParam('numprocs', $iscompile) + 1; // The + 1 allows for the sh command below.
         $sandboxCommandBits = array(

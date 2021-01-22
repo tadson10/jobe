@@ -161,7 +161,7 @@ class Restapi extends REST_Controller {
         // $this->response(time(), 500);
 
         if (FileCache::save_file($fileId, $contents, $dir) === FALSE) {
-            $this->error("put: failed to write file $fileId to cache", 500);
+            $this->error("Failed to save file <strong>$fileId</strong>.", 500);
         }
 	
         $len = strlen($contents);
@@ -224,10 +224,10 @@ class Restapi extends REST_Controller {
         // $podatkiUstrezni = $this->preveriUstreznostPodatkov($port, $jobeUser, $randomValue);
         if($userSM) {
             exec("sudo /usr/bin/pkill -9 -u {$jobeUser}"); // Kill any remaining processes
-            $this->response("Running processes for user " . $jobeUser . " were killed! " . $port . "_" . $jobeUser . "_" . $randomValue, 201);
+            $this->response("Node.js app was stopped.", 201);
         }
         else {
-            $this->response("Invalid credentials for user " . $jobeUser . "!" . $port . "_" . $jobeUser . "_" . $randomValue, 201);
+            $this->response("JOBE user reservation expired.", 500);
         }
 /*
         if($port) {
@@ -308,7 +308,7 @@ class Restapi extends REST_Controller {
         if (!$run = $this->post('run_spec', false)) {
             $this->error('runs_post: missing or invalid run_spec parameter', 400);
         }
-        if (!is_array($run) || !isset($run['sourcecode']) ||
+        if (!is_array($run) ||
                 !isset($run['language_id'])
         ) {
             $this->error('runs_post: invalid run specification', 400);
@@ -374,7 +374,7 @@ class Restapi extends REST_Controller {
         // to clean up the task with close() before handling the exception.
         try {
             try {
-                $this->task->prepare_execution_environment($run->sourcecode, $userSM);
+                $this->task->prepare_execution_environment($userSM);
 
                 $this->task->load_files($files);
 

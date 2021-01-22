@@ -16,7 +16,6 @@ import sys
 JOBE_DIRS = ['/var/www/jobe', '/var/www/html/jobe']
 LANGUAGE_CACHE_FILE = '/tmp/jobe_language_cache_file'
 FILE_CACHE_BASE = '/home/jobe/files'
-PORT_IDS = [[3000, ''], [3001, ''], [3002, ''], [3003, ''], [3004, ''], [3005, ''], [3006, ''], [3007, ''], [3008, ''], [3009, ''], [3010, '']]
 
 def get_config(param_name, install_dir):
     '''Get a config parameter from <<install_dir>>/application/config/config.php.
