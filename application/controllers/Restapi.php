@@ -18,7 +18,7 @@
  */
 
 
-if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+if (!defined('BASEPATH')) exit('No direct script access allowed');
 
 require_once('application/libraries/REST_Controller.php');
 require_once('application/libraries/LanguageTask.php');
@@ -41,13 +41,12 @@ class Restapi extends REST_Controller {
     // the access-control headers, and then quits if it's an OPTIONS request,
     // which is the "pre-flight" browser generated request to check access.]
     // See http://stackoverflow.com/questions/15602099/http-options-error-in-phil-sturgeons-codeigniter-restserver-and-backbone-js
-    public function __construct()
-    {
+    public function __construct() {
         header('Access-Control-Allow-Origin: *');
         header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method");
         header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, HEAD, DELETE");
         $method = $_SERVER['REQUEST_METHOD'];
-        if($method == "OPTIONS") {
+        if ($method == "OPTIONS") {
             die();
         }
         parent::__construct();
@@ -57,7 +56,7 @@ class Restapi extends REST_Controller {
         if ($this->config->item('rest_enable_limits')) {
             $this->load->config('per_method_limits');
             $limits = $this->config->item('per_method_limits');
-            foreach ($limits as $method=>$limit) {
+            foreach ($limits as $method => $limit) {
                 $this->methods[$method]['limit'] = $limit;
             }
         }
@@ -71,7 +70,7 @@ class Restapi extends REST_Controller {
     }
 
 
-    protected function error($message, $httpCode=400) {
+    protected function error($message, $httpCode = 400) {
         // Generate the http response containing the given message with the given
         // HTTP response code. Log the error first.
         $this->log('error', $message);
@@ -88,7 +87,7 @@ class Restapi extends REST_Controller {
     // ****************************
 
     // Put (i.e. create or update) a file
-    public function files_put($fileId=FALSE) {
+    public function files_put($fileId = FALSE) {
         if ($fileId === FALSE) {
             $this->error('No file id in URL');
         }
@@ -105,7 +104,7 @@ class Restapi extends REST_Controller {
         if (FileCache::file_put_contents($fileId, $contents) === FALSE) {
             $this->error("put: failed to write file $fileId to cache", 500);
         }
-	
+
         $len = strlen($contents);
         $this->log('debug', "Put file $fileId, size $len");
         $this->response(NULL, 204);
@@ -113,23 +112,23 @@ class Restapi extends REST_Controller {
 
     //TadejS
     // Put (i.e. create or update) a file
-    public function file_put($fileId=FALSE) {
+    public function file_put($fileId = FALSE) {
         $response = array("message" => '', "port" => null, "jobeUser" => null, "randomValue" => null);
-        
+
         // Check PORT reservation
         $port = $this->put("port", FALSE);
         $randomValue = $this->put("randomValue", FALSE);
         $jobeUser = $this->put("jobeUser", FALSE);
 
         $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
-        
+
         // Reservation doesn't exist
-        if(!$userSM) {
+        if (!$userSM) {
             $response["message"] = "Reservation expired. Please reserve JOBE user and try again.";
             $response["port"] = $port;
             $response["jobeUser"] = $jobeUser;
             $response["randomValue"] = $randomValue;
-    
+
             $this->response($response, 403);
         }
 
@@ -151,20 +150,20 @@ class Restapi extends REST_Controller {
             $this->error("put: contents of file $fileId are not valid base-64");
         }
 
-        
-        $dir = $jobeUser."_".$port."_".$randomValue;
+
+        $dir = $jobeUser . "_" . $port . "_" . $randomValue;
         // All files except `app.js` are saved in /public
-        if($fileId != "app.js")
-            $dir = $dir."/public";
-        
-        if($fileId == "app.js")
+        if ($fileId != "app.js")
+            $dir = $dir . "/public";
+
+        if ($fileId == "app.js")
             $fileId = "app";
 
 
         if (FileCache::save_file($fileId, $contents, $dir) === FALSE) {
             $this->error("Failed to save file <strong>$fileId</strong>.", 500);
         }
-	
+
         $len = strlen($contents);
         $this->log('debug', "Put file $fileId, size $len");
         $response["message"] = "File uploaded successfully!";
@@ -205,7 +204,7 @@ class Restapi extends REST_Controller {
         // $this->response($port, 403);
 
         // Reservation doesn't exist
-        if(!$userSM) {
+        if (!$userSM) {
             $odgovor["message"] = "Reservation expired. Please reserve JOBE user and try again.";
             $odgovor["port"] = $port;
             $odgovor["jobeUser"] = $jobeUser;
@@ -213,18 +212,17 @@ class Restapi extends REST_Controller {
 
             $this->response($odgovor, 403);
         }
-        
+
         // Nastavimo za primer, ko poleg API KEY pošlje uporabnik še CREDENTIALS, ki pa so lahko napačni
         $port = $userSM[5];
         $randomValue = $userSM[2];
         $jobeUser = $userSM[4];
-        
 
-        if($userSM) {
+
+        if ($userSM) {
             exec("sudo /usr/bin/pkill -9 -u {$jobeUser}"); // Kill any remaining processes
             $this->response("Node.js app was stopped.", 201);
-        }
-        else {
+        } else {
             $this->response("JOBE user reservation expired.", 500);
         }
     }
@@ -249,14 +247,14 @@ class Restapi extends REST_Controller {
         // Check if PORT reservation is valid
         $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
 
-        
+
         // Reservation doesn't exist
-        if(!$userSM) {
+        if (!$userSM) {
             $odgovor["message"] = "Reservation expired. Please reserve JOBE user and try again.";
             $odgovor["port"] = $port;
             $odgovor["jobeUser"] = $jobeUser;
             $odgovor["randomValue"] = $randomValue;
-    
+
             $this->response($odgovor, 403);
         }
 
@@ -269,9 +267,7 @@ class Restapi extends REST_Controller {
         if (!$run = $this->post('run_spec', false)) {
             $this->error('runs_post: missing or invalid run_spec parameter', 400);
         }
-        if (!is_array($run) ||
-                !isset($run['language_id'])
-        ) {
+        if (!is_array($run) || !isset($run['language_id'])) {
             $this->error('runs_post: invalid run specification', 400);
         }
 
@@ -290,7 +286,7 @@ class Restapi extends REST_Controller {
         } else {
             $files = array();
         }
-        
+
 
         // Get the the request languages and check it.
         $language = $run->language_id;
@@ -313,8 +309,9 @@ class Restapi extends REST_Controller {
 
         // Get the parameters, and validate.
         $params = isset($run->parameters) ? $run->parameters : array();
-        if (isset($params['cputime']) &&
-                intval($params['cputime']) > intval($CI->config->item('cputime_upper_limit_secs'))
+        if (
+            isset($params['cputime']) &&
+            intval($params['cputime']) > intval($CI->config->item('cputime_upper_limit_secs'))
         ) {
             $this->response("cputime exceeds maximum allowed on this Jobe server", 400);
         }
@@ -324,7 +321,7 @@ class Restapi extends REST_Controller {
         // When debugging, the task run directory and its contents
         // are not deleted after the run.
         $debug = $this->config->item('debugging') ||
-                (isset($run->debug) && $run->debug);
+            (isset($run->debug) && $run->debug);
 
 
 
@@ -341,12 +338,11 @@ class Restapi extends REST_Controller {
 
                 $this->log('debug', "runs_post: compiling job {$this->task->id}");
                 $this->task->compile();
-                
+
                 if (empty($this->task->cmpinfo)) {
                     $this->log('debug', "runs_post: executing job {$this->task->id}");
                     $this->task->execute($run);
                 }
-
             } finally {
                 // Delete task run directory unless it's a debug run
                 $this->task->close(!$debug);
@@ -357,16 +353,14 @@ class Restapi extends REST_Controller {
             $this->log('debug', "runs_post: returning 200 OK for task {$this->task->id}");
             $this->response($this->task->resultObject(), 200);
 
-        // Report any errors.
+            // Report any errors.
         } catch (JobException $e) {
             $this->log('debug', 'runs_post: ' . $e->getLogMessage());
             $this->response($e->getMessage(), $e->getHttpStatusCode());
-
         } catch (OverloadException $e) {
             $this->log('debug', 'runs_post: overload exception occurred');
             $resultobject = new ResultObject(0, Task::RESULT_SERVER_OVERLOAD);
             $this->response($resultobject, 200);
-
         } catch (Exception $e) {
             $this->response('Server exception (' . $e->getMessage() . ')', 500);
         }
@@ -375,8 +369,7 @@ class Restapi extends REST_Controller {
     // **********************
     //      RUN_RESULTS
     // **********************
-    public function runresults_get()
-    {
+    public function runresults_get() {
         $this->error('runresults_get: unimplemented, as all submissions run immediately.', 404);
     }
 
@@ -399,16 +392,16 @@ class Restapi extends REST_Controller {
         $array = $this->findAndRemoveExpiredPortReservations();
         $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, FALSE);
         // We founnd reserved port for this user
-        if($userSM)
+        if ($userSM)
             $isOldUser = true;
 
         // We didn't find reservation for user with this API KEY or CREDENTIALS
-        if(!$isOldUser) {
+        if (!$isOldUser) {
             // get API KEY from header
-            $header = apache_request_headers(); 
+            $header = apache_request_headers();
             $apiKeyExists = array_key_exists("X-API-KEY", $header);
             // If API KEY exists, we check if reservation exists for this api key
-            if($apiKeyExists) {
+            if ($apiKeyExists) {
                 $apiKey = $header["X-API-KEY"];
             }
 
@@ -422,38 +415,35 @@ class Restapi extends REST_Controller {
                 // Allocate one of the Jobe users.
                 $userSM = $task->getFreeUser($apiKey);
                 $task = null;
-            }
-            catch (OverloadException $e) {
+            } catch (OverloadException $e) {
                 $odgovor["message"] = 'No ports are available at the moment, please try again later!';
                 $this->response($odgovor, 500);
             }
         }
-        
+
 
         // read jobe user properties (credentials)
-        $port = $userSM[5];       
+        $port = $userSM[5];
         $jobeUser = $userSM[4];
         $randomValue = $userSM[2];
-    
 
-       
-        
+
+
+
         // Create folder to reserve PORT
         // Folder is created when PORT is reserved for the first time
         // If it is OLD jobe user, we just send response
-        $dir = $jobeUser."_".$port."_".$randomValue;
-        if((!$isOldUser && mkdir("/home/jobe/runs/".$dir) && mkdir("/home/jobe/runs/".$dir."/public")) || $isOldUser) {
+        $dir = $jobeUser . "_" . $port . "_" . $randomValue;
+        if ((!$isOldUser && mkdir("/home/jobe/runs/" . $dir) && mkdir("/home/jobe/runs/" . $dir . "/public")) || $isOldUser) {
             // Če smo uspešno ustvarili mapo
             //vrnemo prosti port
             $odgovor["port"] = $port;
             $odgovor["jobeUser"] = $jobeUser;
-            $odgovor["randomValue"] = $randomValue;             
+            $odgovor["randomValue"] = $randomValue;
             $this->response($odgovor, 200);
-        }
-        else {
+        } else {
             $odgovor["message"] = "Problem getting free port. Please try again later.";
             $this->response($odgovor, 500);
-
         }
     }
 
@@ -462,28 +452,28 @@ class Restapi extends REST_Controller {
         $userSM = false;
 
         // if checkCred is TRUE and user didn't send any of the credentials, we return FALSE
-        if($checkCred && (!$port || !$jobeUser || !$randomValue))
+        if ($checkCred && (!$port || !$jobeUser || !$randomValue))
             return $userSM;
-        
-        
+
+
         // get API KEY from header
-        $header = apache_request_headers(); 
+        $header = apache_request_headers();
 
         $apiKey = $header["X-API-KEY"];
         //Check if port is already reserved
         $userSM = $this->getJobeUserByApiKeyAndCredentials($apiKey, $port, $jobeUser, $randomValue, $checkCred);
-        
+
         return $userSM;
     }
 
     // Count the number of active users
     private function countActiveUsers($active = FALSE, $numUsers = 0) {
         $activeCount = 0;
-        if(!$active)
+        if (!$active)
             return $activeCount;
-        
-        for($i = 0; $i < $numUsers; $i++) {
-            if($active[$i][0])
+
+        for ($i = 0; $i < $numUsers; $i++) {
+            if ($active[$i][0])
                 $activeCount++;
         }
 
@@ -497,16 +487,16 @@ class Restapi extends REST_Controller {
 
         $numUsers = $CI->config->item('jobe_max_users');
 
-        $file = __FILE__;//"/var/www/html/jobe/application/controllers/Restapi.php";
-        $key = ftok(__DIR__."/../libraries/LanguageTask.php", 'j');
+        $file = __FILE__; //"/var/www/html/jobe/application/controllers/Restapi.php";
+        $key = ftok(__DIR__ . "/../libraries/LanguageTask.php", 'j');
         $sem = sem_get($key);
         sem_acquire($sem);
         $shm = shm_attach($key);
-        
+
         if (!shm_has_var($shm, ACTIVE_USERS)) {
             // First time since boot -- initialise active list
             $active = array();
-            for($i = 0; $i < $numUsers; $i++) {
+            for ($i = 0; $i < $numUsers; $i++) {
                 $active[$i][0] = FALSE;
                 $active[$i][1] = null;
                 $active[$i][2] = null;
@@ -523,8 +513,8 @@ class Restapi extends REST_Controller {
 
         // Check if any port reservation has expired (1h)
         // Reservation is removed only if all JOBE users are taken
-        for($i = 0; $i < $numUsers; $i++) {
-            if($areAllUsersTaken && $active[$i][0] && intval($active[$i][1]) <= time()) {
+        for ($i = 0; $i < $numUsers; $i++) {
+            if ($areAllUsersTaken && $active[$i][0] && intval($active[$i][1]) <= time()) {
                 $successfully = $this->removeDir($active[$i][5], $active[$i][4], $active[$i][2]);
                 $active[$i][0] = FALSE;
                 $active[$i][1] = null; //time
@@ -546,24 +536,24 @@ class Restapi extends REST_Controller {
     private function getJobeUserByApiKeyAndCredentials($apiKey = FALSE, $port = FALSE, $jobeUser = FALSE, $randomValue = FALSE, $checkCred = TRUE) {
         global $CI;
 
-        if(!$apiKey)
+        if (!$apiKey)
             return null;
 
-        $file = __FILE__;//"/var/www/html/jobe/application/controllers/Restapi.php";
-        $key = ftok(__DIR__."/../libraries/LanguageTask.php", 'j');
+        $file = __FILE__; //"/var/www/html/jobe/application/controllers/Restapi.php";
+        $key = ftok(__DIR__ . "/../libraries/LanguageTask.php", 'j');
         $sem = sem_get($key);
         sem_acquire($sem);
         $shm = shm_attach($key);
         $active = shm_get_var($shm, ACTIVE_USERS);
-        
+
         shm_put_var($shm, ACTIVE_USERS, $active);
         shm_detach($shm);
         sem_release($sem);
-        
+
         $numUsers = $CI->config->item('jobe_max_users');
 
-        for($i = 0; $i < $numUsers; $i++) {
-            if($active[$i][3] == $apiKey && (!$checkCred || ($checkCred && $active[$i][5] == $port && $active[$i][4] == $jobeUser && $active[$i][2] == $randomValue))) {
+        for ($i = 0; $i < $numUsers; $i++) {
+            if ($active[$i][3] == $apiKey && (!$checkCred || ($checkCred && $active[$i][5] == $port && $active[$i][4] == $jobeUser && $active[$i][2] == $randomValue))) {
                 // add index to object
                 $tmp = $active[$i];
                 $tmp[6] = $i;
@@ -573,52 +563,52 @@ class Restapi extends REST_Controller {
         return false;
     }
 
-     // Returns save credentials for JOBE user from SHARED MEMORY for those credentials
-     private function getJobeUserByCredentials($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE) {
+    // Returns save credentials for JOBE user from SHARED MEMORY for those credentials
+    private function getJobeUserByCredentials($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE) {
         // global $CI;
 
-        if(!$port || !$jobeUser || !$randomValue)
+        if (!$port || !$jobeUser || !$randomValue)
             return null;
 
-        $file = __FILE__;//"/var/www/html/jobe/application/controllers/Restapi.php";
-        $key = ftok(__DIR__."/../libraries/LanguageTask.php", 'j');
+        $file = __FILE__; //"/var/www/html/jobe/application/controllers/Restapi.php";
+        $key = ftok(__DIR__ . "/../libraries/LanguageTask.php", 'j');
         $sem = sem_get($key);
         sem_acquire($sem);
         $shm = shm_attach($key);
         $active = shm_get_var($shm, ACTIVE_USERS);
-        
+
         // shm_put_var($shm, ACTIVE_USERS, $active);
         shm_detach($shm);
         sem_release($sem);
-        
+
         // $numUsers = $CI->config->item('jobe_max_users');
         // $userId = $port - 3000;
         $userId = (int)explode("jobe", $jobeUser)[1];
 
         //check if there is reservation for the CREDENTIALS
-        if($active[$userId][2] == $randomValue && $active[$userId][4] == $jobeUser && $active[$userId][5] == $port) {
+        if ($active[$userId][2] == $randomValue && $active[$userId][4] == $jobeUser && $active[$userId][5] == $port) {
             // add index to object
             $tmp = $active[$userId];
             $tmp[6] = $userId;
             return $tmp;
         }
-        
+
         return false;
     }
-    
+
 
     //returns saved info for particular JOBE user with index = $jobeUserId
     private function getJobeUserByUserId($jobeUserId = FALSE) {
-        if(!$jobeUserId && $jobeUserId != 0)
+        if (!$jobeUserId && $jobeUserId != 0)
             return null;
 
-        $file = __FILE__;//"/var/www/html/jobe/application/controllers/Restapi.php";
-        $key = ftok(__DIR__."/../libraries/LanguageTask.php", 'j');
+        $file = __FILE__; //"/var/www/html/jobe/application/controllers/Restapi.php";
+        $key = ftok(__DIR__ . "/../libraries/LanguageTask.php", 'j');
         $sem = sem_get($key);
         sem_acquire($sem);
         $shm = shm_attach($key);
         $active = shm_get_var($shm, ACTIVE_USERS);
-        
+
         // shm_put_var($shm, ACTIVE_USERS, $active);
         shm_detach($shm);
         sem_release($sem);
@@ -627,13 +617,13 @@ class Restapi extends REST_Controller {
 
     // removes directory recursively for credential
     private function removeDir($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE) {
-        if(!$port && !$jobeUser && !$randomValue)
+        if (!$port && !$jobeUser && !$randomValue)
             return FALSE;
-        
+
         $dir = $jobeUser . "_" . $port . "_" .  $randomValue;
 
         // if we successfully delete directory or it doesn't exist
-        if((is_dir("/home/jobe/runs/".$dir) && exec("sudo rm -R /home/jobe/runs/".$dir)) || !is_dir("/home/jobe/runs/".$dir))
+        if ((is_dir("/home/jobe/runs/" . $dir) && exec("sudo rm -R /home/jobe/runs/" . $dir)) || !is_dir("/home/jobe/runs/" . $dir))
             return TRUE;
         else
             return FALSE;
@@ -642,12 +632,11 @@ class Restapi extends REST_Controller {
     // **********************
     //      LANGUAGES
     // **********************
-    public function languages_get()
-    {
+    public function languages_get() {
         $this->log('debug', 'languages_get called');
         $languages = $this->supported_languages();
         $langs = array();
-        foreach($languages as $lang => $version) {
+        foreach ($languages as $lang => $version) {
             $langs[] = array($lang, $version);
         }
         $this->response($langs, 200);
@@ -658,12 +647,12 @@ class Restapi extends REST_Controller {
     // **********************
     private function is_valid_filespec($file) {
         return (count($file) == 2 || count($file) == 3) &&
-             is_string($file[0]) &&
-             is_string($file[1]) &&
-             strlen($file[0]) >= MIN_FILE_IDENTIFIER_SIZE &&
-             ctype_alnum($file[0]) &&
-             strlen($file[1]) > 0 &&
-             ctype_alnum(str_replace(array('-', '_', '.'), '', $file[1]));
+            is_string($file[0]) &&
+            is_string($file[1]) &&
+            strlen($file[0]) >= MIN_FILE_IDENTIFIER_SIZE &&
+            ctype_alnum($file[0]) &&
+            strlen($file[1]) > 0 &&
+            ctype_alnum(str_replace(array('-', '_', '.'), '', $file[1]));
     }
 
 
