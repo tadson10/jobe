@@ -122,7 +122,6 @@ class Restapi extends REST_Controller {
         $jobeUser = $this->put("jobeUser", FALSE);
 
         $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
-        // $this->response($randomValue, 403);
         
         // Reservation doesn't exist
         if(!$userSM) {
@@ -138,7 +137,6 @@ class Restapi extends REST_Controller {
         $port = $userSM[5];
         $randomValue = $userSM[2];
         $jobeUser = $userSM[4];
-        // $this->response($randomValue, 403);
 
         if ($fileId === FALSE) {
             $this->error('No file id in URL');
@@ -155,10 +153,13 @@ class Restapi extends REST_Controller {
 
         
         $dir = $jobeUser."_".$port."_".$randomValue;
-        // All files except `app.js` are save in /public
+        // All files except `app.js` are saved in /public
         if($fileId != "app.js")
             $dir = $dir."/public";
-        // $this->response(time(), 500);
+        
+        if($fileId == "app.js")
+            $fileId = "app";
+
 
         if (FileCache::save_file($fileId, $contents, $dir) === FALSE) {
             $this->error("Failed to save file <strong>$fileId</strong>.", 500);
@@ -213,15 +214,12 @@ class Restapi extends REST_Controller {
             $this->response($odgovor, 403);
         }
         
-        // $this->response($userSM, 403);
-
         // Nastavimo za primer, ko poleg API KEY pošlje uporabnik še CREDENTIALS, ki pa so lahko napačni
         $port = $userSM[5];
         $randomValue = $userSM[2];
         $jobeUser = $userSM[4];
         
 
-        // $podatkiUstrezni = $this->preveriUstreznostPodatkov($port, $jobeUser, $randomValue);
         if($userSM) {
             exec("sudo /usr/bin/pkill -9 -u {$jobeUser}"); // Kill any remaining processes
             $this->response("Node.js app was stopped.", 201);
@@ -229,30 +227,6 @@ class Restapi extends REST_Controller {
         else {
             $this->response("JOBE user reservation expired.", 500);
         }
-/*
-        if($port) {
-
-            $pid = shell_exec("sudo lsof -t -i:".$port);
-            //$this->response("sudo lsof -t -i:" . $port . " " . $port, 200);
-
-            if($pid){
-                $kill = shell_exec("sudo kill -9 " . $pid . " 2>&1");
-
-                if(!$kill)
-                    $this->response("Server uspešno ustavljen!", 200);
-                else
-                    $this->response("Prišlo je do napake pri ustavljanju serverja!", 400);
-            }
-            else {
-                $this->response("No server is running at port " . $port . "! " . $jobeUser, 400);
-            }
-            
-        }
-        else {
-            //Restapi::$PORT_IDS[0][1] = "BLA";
-            $this->response('Port number is missing! ' . Restapi::$PORT_IDS[0][1], 400);
-        }
-        */
     }
 
     // ****************************
@@ -272,10 +246,6 @@ class Restapi extends REST_Controller {
         $jobeUser = $tmp["jobeUser"];
         $randomValue = $tmp["randomValue"];
 
-        // $ustrezniPodatki = $this->preveriUstreznostPodatkov($port, $jobeUser, $randomValue);
-        // if(!$ustrezniPodatki)
-        //     $this->response("Reservation of port " . $port . " expired. Please, reserve another port.", 400);
-
         // Check if PORT reservation is valid
         $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
 
@@ -289,15 +259,6 @@ class Restapi extends REST_Controller {
     
             $this->response($odgovor, 403);
         }
-        /*else{
-            // $this->response($userSM, 403);
-    
-            // Nastavimo za primer, ko poleg API KEY pošlje uporabnik še CREDENTIALS, ki pa so lahko napačni
-            $port = $userSM[5];
-            $randomValue = $userSM[2];
-            $jobeUser = $userSM[4];
-        }*/
-        // $this->response($userSM, 403);
 
         global $CI;
 
@@ -426,15 +387,6 @@ class Restapi extends REST_Controller {
     // Checks if we already have reservation for API KEY
     // If not it reserves PORT (and JOBE user) for this API KEY and returns credentials (port, jobeUser, randomValue)
     public function free_ports_post() {
-        // $ip = 0;
-        // if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-        //     $ip = $_SERVER['HTTP_CLIENT_IP'];
-        // } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        //     $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-        // } else {
-        //     $ip = $_SERVER['REMOTE_ADDR'];
-        // }
-        
         $odgovor = array("message" => '', "port" => null, "jobeUser" => null, "randomValue" => null);
         $apiKey = null;
         $isOldUser = false;
@@ -449,34 +401,6 @@ class Restapi extends REST_Controller {
         // We founnd reserved port for this user
         if($userSM)
             $isOldUser = true;
-
-            //  $this->response($userSM, 202);
-
-        // get API KEY from header
-        /*$header = apache_request_headers(); 
-            //  $this->response($header, 500);
-        
-        $apiKeyExists = array_key_exists("X-API-KEY", $header);//array_search("dcc9a835-9750-4725-af5b-2c839908f71", $header);
-        // If API KEY exists, we check if reservation exists for this api key
-        if($apiKeyExists) {
-            $apiKey = $header["X-API-KEY"];
-            //Check if port is already reserved
-            $userSM = $this->getJobeUserByApiKeyAndCredentials($apiKey);
-            
-        }
-        else {
-            // TREBA PREGLEDATI, ALI OBSTAJA REZERVACIJO ZA KOMBINACIJO jobeUser_port_naključnaVrednost!
-            // Pregledamo, ali je uporabnik v BODY poslal tudi port in nakljucno vrednost
-            $port = $this->post("port");
-            $randomValue = $this->post("randomValue");
-            $jobeUser = $this->post("jobeUser");
-            
-            if($port && $randomValue && $jobeUser)
-                $userSM = $this->getJobeUserByCredentials($port, $jobeUser, $randomValue);
-            $this->response($this, 500);
-        }*/
-        
-        
 
         // We didn't find reservation for user with this API KEY or CREDENTIALS
         if(!$isOldUser) {
@@ -494,7 +418,6 @@ class Restapi extends REST_Controller {
             try {
                 // Create the task.
                 $task = new Nodejs_Task("", "", "");
-                // $task->freeUser(0);
 
                 // Allocate one of the Jobe users.
                 $userSM = $task->getFreeUser($apiKey);
@@ -505,13 +428,6 @@ class Restapi extends REST_Controller {
                 $this->response($odgovor, 500);
             }
         }
-        // else {
-            
-        //     $userId  = $isOldUser[6];
-        //     $jobeUser = $isOldUser[4];
-        // }
-        // $jobeUser = sprintf("jobe%02d", $userId);
-        // $this->response($isOldUser , 500);
         
 
         // read jobe user properties (credentials)
@@ -529,76 +445,16 @@ class Restapi extends REST_Controller {
         if((!$isOldUser && mkdir("/home/jobe/runs/".$dir) && mkdir("/home/jobe/runs/".$dir."/public")) || $isOldUser) {
             // Če smo uspešno ustvarili mapo
             //vrnemo prosti port
-            // $odgovor["message"] =  ;
             $odgovor["port"] = $port;
             $odgovor["jobeUser"] = $jobeUser;
             $odgovor["randomValue"] = $randomValue;             
             $this->response($odgovor, 200);
-            // $this->response(implode(' | ', array_map('implode', $array, array_fill(0, count($array), ','))), 200);
         }
         else {
-            // if($userId)
-            //     $task->freeUser($userId);
             $odgovor["message"] = "Problem getting free port. Please try again later.";
             $this->response($odgovor, 500);
 
         }
-        
-/*
-        // Napolnimo tabelo s porti in označimo vse kot neuporabljene (false)
-        $dir = dir('/home/jobe/runs');
-        $porti = [];
-        for($i = 0; $i < 20; $i++) {
-            $porti[$i] = [3000 + $i, false];
-        }
-        //$porti = [[3000, false], [3001, false], [3002, false], [3003, false], [3004, false], [3005, false], [3006, false], [3007, false], [3008, false], [3009, false]];
-        $tmp = '';
-        //Dobimo vse poddirektorije
-        while (false !== ($entry = $dir->read())) {
-            
-            $array = explode("_", $entry);
-            $port = intval($array[0]);
-            $tmp = $tmp  . ', '. $port;
-            //Shranimo port kot že uporabljen
-            if($port != 0) {
-                $porti[$port - 3000][1] = true;
-            }
-        }
-
-        //Najdemo prvi neuporabljen port
-        $port = null;
-        for($i = 0; $i < count($porti); $i++) {
-            if(!$porti[$i][1]) {
-                $port = $porti[$i][0];
-                break;
-            }
-        }
-        $odgovor = array("message" => '', "port" => null, "jobeUser" => null, "randomValue" => null);
-        
-        //Ne najdemo prostega porta
-        if(is_null($port)) {
-            $odgovor["message"] = 'No ports are available at the moment, please try again later!';
-            $this->response($odgovor, 404);
-        }
-
-        $str=rand(); 
-        $randomValue = md5($str); 
-
-        // Ustvarimo mapo, da rezerviramo PORT
-        $dir = $port."_".$jobeUser."_".$randomValue;
-        if(mkdir("/home/jobe/runs/".$dir)) {
-            // Če smo uspešno ustvarili mapo
-            //vrnemo prosti port
-            $odgovor["port"] = $port;
-            $odgovor["jobeUser"] = $jobeUser;
-            $odgovor["randomValue"] = $randomValue;
-            $this->response($odgovor, 200);
-        }
-        else {
-            $task->freeUser($userId);
-            $odgovor["message"] = "Problem getting free port. Please try again later.";
-            $this->response($odgovor, 500);
-        }*/
     }
 
     // Check if user for this API KEY and credentials already exists
@@ -616,7 +472,6 @@ class Restapi extends REST_Controller {
         $apiKey = $header["X-API-KEY"];
         //Check if port is already reserved
         $userSM = $this->getJobeUserByApiKeyAndCredentials($apiKey, $port, $jobeUser, $randomValue, $checkCred);
-        // $this->response($userSM, 201);
         
         return $userSM;
     }
@@ -670,17 +525,13 @@ class Restapi extends REST_Controller {
         // Reservation is removed only if all JOBE users are taken
         for($i = 0; $i < $numUsers; $i++) {
             if($areAllUsersTaken && $active[$i][0] && intval($active[$i][1]) <= time()) {
-                 $successfully = $this->removeDir($active[$i][5], $active[$i][4], $active[$i][2]);
-                // if($successfully) {
-                    $active[$i][0] = FALSE;
-                    $active[$i][1] = null; //time
-                    $active[$i][2] = null; //random value
-                    $active[$i][3] = null; //api key
-                    $active[$i][4] = null; //jobe user
-                    $active[$i][5] = null; //port
-            
-                // }
-                // 
+                $successfully = $this->removeDir($active[$i][5], $active[$i][4], $active[$i][2]);
+                $active[$i][0] = FALSE;
+                $active[$i][1] = null; //time
+                $active[$i][2] = null; //random value
+                $active[$i][3] = null; //api key
+                $active[$i][4] = null; //jobe user
+                $active[$i][5] = null; //port
             }
         }
         shm_put_var($shm, ACTIVE_USERS, $active);
@@ -774,24 +625,11 @@ class Restapi extends REST_Controller {
         return $active[$jobeUserId];
     }
 
-    // function removeDirectory($path) {
-
-    //     $files = glob($path . '/*');
-    //     foreach ($files as $file) {
-    //         is_dir($file) ? removeDirectory($file) : unlink($file);
-    //     }
-    //     rmdir($path);
-    
-    //     return;
-    // }
-
     // removes directory recursively for credential
     private function removeDir($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE) {
         if(!$port && !$jobeUser && !$randomValue)
             return FALSE;
         
-        // $port = 3000 + $jobeUserId;
-        // $jobeUser = sprintf("jobe%02d", $jobeUserId);
         $dir = $jobeUser . "_" . $port . "_" .  $randomValue;
 
         // if we successfully delete directory or it doesn't exist
@@ -800,75 +638,6 @@ class Restapi extends REST_Controller {
         else
             return FALSE;
     }
-// SE NE UPORABLJA - BO TREBA IZBRISATI!
-    // // Reserve port in SHARED MEMORY
-    // public function sharedMemory() {
-    //     global $CI;
-
-    //     $numPorts = $CI->config->item('jobe_max_users');
-    //     $key = ftok(__FILE__,  "s");
-    //     $sem = sem_get($key);
-    //     $port = -1;
-    //     $retries = 0;
-    //     while ($port == -1) {  // Loop until we have a port (or an OverloadException is thrown)
-    //         sem_acquire($sem);
-    //         $shm = shm_attach($key);
-
-    //         // PRVIČ - še ni inicializirano v SHARED MEMORY
-    //         if (!shm_has_var($shm, ACTIVE_PORTS)) {
-    //             // First time since boot -- initialise active list
-    //             $active = array();
-    //             for($i = 0; $i < $numPorts; $i++) {
-    //                 $active[$i][0] = FALSE;
-    //                 $active[$i][1] = null;
-    //             }
-    //             shm_put_var($shm, ACTIVE_PORTS, $active);
-    //         }
-    //         // pridobimo vrednost iz SHARED MEMORY
-    //         $active = shm_get_var($shm, ACTIVE_PORTS);
-    //         for ($port = 0; $port < $numPorts; $port++) {
-    //             if (!$active[$port][0]) {
-    //                 $active[$port][0] = TRUE;
-    //                 $active[$port][1] = time();
-    //                 shm_put_var($shm, ACTIVE_PORTS, $active);
-    //                 break;
-    //             }
-    //         }
-    //         shm_detach($shm);
-    //         sem_release($sem);
-    //         if ($port == $numPorts) {
-    //             $port = -1;
-    //             $retries += 1;
-    //             if ($retries <= MAX_RETRIES) {
-    //                 sleep(1);
-    //             } else {
-    //                 throw new OverloadException();
-    //             }
-    //         }
-    //     }
-
-    //     return $port;
-    // }
-
-    // public function preveriUstreznostPodatkov($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE) {
-    //     if(!$port || !$jobeUser || !$randomValue)
-    //         return FALSE;
-
-    //     //chdir('/home/jobe/runs');
-    //     $dir = dir('/home/jobe/runs');
-    //     $porti = [];
-        
-    //     $iskaniDir = $port . "_" . $jobeUser . "_" . $randomValue;
-    //     //Dobimo vse poddirektorije
-    //     while (false !== ($entry = $dir->read())) {
-    //         if(strcmp($entry, $iskaniDir) == 0)
-    //             return TRUE;
-    //         // $array = explode("_", $entry);
-    //         // $portDir = intval($array[0]);
-            
-    //     }
-    //     return FALSE;
-    // }
 
     // **********************
     //      LANGUAGES

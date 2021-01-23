@@ -107,7 +107,7 @@ abstract class Task {
     // any of the jobe<n> users, running programs will be able
     // to hoover up other students' submissions.
     public function prepare_execution_environment($userSm = NULL) {
-
+        
         // Create the temporary directory that will be used.
         $this->workdir = "/home/jobe/runs/".$userSm[4]."_".$userSm[5]."_".$userSm[2];
         /*$this->workdir = tempnam("/home/jobe/runs", "jobe_");
@@ -116,7 +116,11 @@ abstract class Task {
             log_message('error', 'LanguageTask constructor: error making temp directory');
             throw new Exception("Task: error making temp directory (race error?)");
         }*/
-        chdir($this->workdir);
+        if(is_dir($this->workdir))
+            chdir($this->workdir);
+        else
+            throw new Exception('Working directory not found. Please, resend your files.');
+        
 
         $this->id = basename($this->workdir);
 
@@ -163,14 +167,14 @@ abstract class Task {
     // Execute this task, which must already have been compiled if necessary
     public function execute($run) {
         try {
+            // Add port information to "nodejs" command
             $cmd = "";
             if($run->language_id == "nodejs")
                 $cmd = 'PORT='.$run->port.' ';
             $cmd = $cmd . implode(' ', $this->getRunCommand());
             
-            $timelimit = $run->timelimit;
 
-            list($this->stdout, $this->stderr) = $this->run_in_sandbox($cmd, false, $this->input, $timelimit);
+            list($this->stdout, $this->stderr) = $this->run_in_sandbox($cmd, false, $this->input);
             $this->stderr = $this->filteredStderr();
             $this->diagnose_result();  // Analyse output and set result
         }
@@ -241,13 +245,13 @@ abstract class Task {
             $active = shm_get_var($shm, ACTIVE_USERS);
             for ($user = 0; $user < $numUsers; $user++) {
                 if (!$active[$user][0]) {
-                    // nakljucna vrednost
+                    // random value
                     $str=rand(); 
                     $randomValue = md5($str);
 
-                    // Najdemo nakljucen neuporabljen port
-                    $port = $this->generirajNakljucenPort($active);
-                    // Če ga najdemo
+                    // Find random free port
+                    $port = $this->generateRandomPort($active);
+                    // If we find free port
                     if($port) {
                         $active[$user][0] = TRUE;
                         $active[$user][1] = time() + 60*60;
@@ -281,8 +285,8 @@ abstract class Task {
         return $active[$user];
     }
 
-    // Preveri, ali port uporablja že kdo drug
-    private function preveriPort($active = FALSE, $port) {
+    // Check if port  is already used
+    private function checkPort($active = FALSE, $port) {
         for($i = 0; $i < count($active); $i++) {
             if($active[$i][5] == $port)
                 return false;
@@ -291,14 +295,14 @@ abstract class Task {
 
     }
 
-    // Generira naključen neuporabljen port
-    private function generirajNakljucenPort($active) {
-        // Če v 2 poskusih ne dobimo porta, vrnemo FALSE
+    // Generates random port number
+    private function generateRandomPort($active) {
+        // try 2 times and then return FALSE / TRUE
         for($i = 0; $i < 2; $i++) {
             $port = rand(3000, 3200);
-            $jePortOk = $this->preveriPort($active, $port);
+            $isPortOk = $this->checkPort($active, $port);
 
-            if($jePortOk)
+            if($isPortOk)
                 return $port;
         }
         return false;
@@ -336,17 +340,11 @@ abstract class Task {
      * @return array a two element array of the standard output and the standard error
      * from running the given command.
      */
-    public function run_in_sandbox($wrappedCmd, $iscompile=true, $stdin=null, $timelimit=FALSE) {
-        // Limit max timelimit
-        if($timelimit) {
-            if($timelimit > $this->maxTimelimit)
-                $timelimit = $this->maxTimelimit / 2;
-        }
-
+    public function run_in_sandbox($wrappedCmd, $iscompile=true, $stdin=null) {
         $filesize = 1000 * $this->getParam('disklimit', $iscompile); // MB -> kB
         $streamsize = 1000 * $this->getParam('streamsize', $iscompile); // MB -> kB
         $memsize = 1000 * $this->getParam('memorylimit', $iscompile);
-        $cputime = $timelimit ? $timelimit : $this->getParam('cputime', $iscompile);
+        $cputime = $this->getParam('cputime', $iscompile); // s
         $killtime = 2 * $cputime; // Kill the job after twice the allowed cpu time
         $numProcs = $this->getParam('numprocs', $iscompile) + 1; // The + 1 allows for the sh command below.
         $sandboxCommandBits = array(

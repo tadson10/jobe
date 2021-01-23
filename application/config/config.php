@@ -539,7 +539,7 @@ $config['proxy_ips'] = '';
 |
 */
 $config['jobe_max_users'] = 20;
-$config['cputime_upper_limit_secs'] = 50;
+$config['cputime_upper_limit_secs'] = 600;
 $config['clean_up_path'] = '/tmp;/var/tmp;/var/crash;/run/lock;/var/lock';
 $config['debugging'] = FALSE;
 
