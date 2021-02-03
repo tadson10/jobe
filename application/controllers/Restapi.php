@@ -33,7 +33,6 @@ define('LANGUAGE_CACHE_FILE', '/tmp/jobe_language_cache_file');
 define('ACTIVE_PORTS', 2);  // The key for the shared memory active users array
 
 class Restapi extends REST_Controller {
-    static $PORT_IDS =  [[3000, ''], [3001, ''], [3002, ''], [3003, ''], [3004, ''], [3005, ''], [3006, ''], [3007, ''], [3008, ''], [3009, ''], [3010, '']];
     protected $languages = array();
 
     // Constructor loads the available languages from the libraries directory.
@@ -150,7 +149,6 @@ class Restapi extends REST_Controller {
             $this->error("put: contents of file $fileId are not valid base-64");
         }
 
-
         $dir = $jobeUser . "_" . $port . "_" . $randomValue;
         // All files except `app.js` are saved in /public
         if ($fileId != "app.js")
@@ -158,7 +156,6 @@ class Restapi extends REST_Controller {
 
         if ($fileId == "app.js")
             $fileId = "app";
-
 
         if (FileCache::save_file($fileId, $contents, $dir) === FALSE) {
             $this->error("Failed to save file <strong>$fileId</strong>.", 500);
@@ -192,7 +189,7 @@ class Restapi extends REST_Controller {
 
 
     // ****************************
-    //        STOP SERVER AT PORT
+    //  STOP SERVER AT PORT
     // ****************************
     public function stop_post() {
         // Check PORT reservation
@@ -201,7 +198,6 @@ class Restapi extends REST_Controller {
         $randomValue = $this->post('randomValue', FALSE);
 
         $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
-        // $this->response($port, 403);
 
         // Reservation doesn't exist
         if (!$userSM) {
@@ -213,11 +209,10 @@ class Restapi extends REST_Controller {
             $this->response($odgovor, 403);
         }
 
-        // Nastavimo za primer, ko poleg API KEY pošlje uporabnik še CREDENTIALS, ki pa so lahko napačni
+        // Get values directly from shared memory
         $port = $userSM[5];
         $randomValue = $userSM[2];
         $jobeUser = $userSM[4];
-
 
         if ($userSM) {
             exec("sudo /usr/bin/pkill -9 -u {$jobeUser}"); // Kill any remaining processes
@@ -239,14 +234,12 @@ class Restapi extends REST_Controller {
 
     public function runs_post() {
         $tmp = $this->post('run_spec', false);
-        // $this->response($tmp, 400);
         $port = $tmp["port"];
         $jobeUser = $tmp["jobeUser"];
         $randomValue = $tmp["randomValue"];
 
         // Check if PORT reservation is valid
         $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
-
 
         // Reservation doesn't exist
         if (!$userSM) {
@@ -323,8 +316,6 @@ class Restapi extends REST_Controller {
         $debug = $this->config->item('debugging') ||
             (isset($run->debug) && $run->debug);
 
-
-
         // Create the task.
         $this->task = new $reqdTaskClass($run->sourcefilename, $input, $params);
 
@@ -347,7 +338,6 @@ class Restapi extends REST_Controller {
                 // Delete task run directory unless it's a debug run
                 $this->task->close(!$debug);
             }
-
 
             // Success!
             $this->log('debug', "runs_post: returning 200 OK for task {$this->task->id}");
@@ -421,22 +411,18 @@ class Restapi extends REST_Controller {
             }
         }
 
-
         // read jobe user properties (credentials)
         $port = $userSM[5];
         $jobeUser = $userSM[4];
         $randomValue = $userSM[2];
-
-
-
 
         // Create folder to reserve PORT
         // Folder is created when PORT is reserved for the first time
         // If it is OLD jobe user, we just send response
         $dir = $jobeUser . "_" . $port . "_" . $randomValue;
         if ((!$isOldUser && mkdir("/home/jobe/runs/" . $dir) && mkdir("/home/jobe/runs/" . $dir . "/public")) || $isOldUser) {
-            // Če smo uspešno ustvarili mapo
-            //vrnemo prosti port
+            // If folder creation was successful
+            // return credentials
             $odgovor["port"] = $port;
             $odgovor["jobeUser"] = $jobeUser;
             $odgovor["randomValue"] = $randomValue;
@@ -505,6 +491,9 @@ class Restapi extends REST_Controller {
                 $active[$i][5] = null;
             }
             shm_put_var($shm, ACTIVE_USERS, $active);
+
+            // remove files of all users
+            $successfully = is_dir("/home/jobe/runs") && exec("sudo rm -R /home/jobe/runs/*");
         }
         $active = shm_get_var($shm, ACTIVE_USERS);
 
@@ -565,8 +554,6 @@ class Restapi extends REST_Controller {
 
     // Returns save credentials for JOBE user from SHARED MEMORY for those credentials
     private function getJobeUserByCredentials($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE) {
-        // global $CI;
-
         if (!$port || !$jobeUser || !$randomValue)
             return null;
 
@@ -577,12 +564,9 @@ class Restapi extends REST_Controller {
         $shm = shm_attach($key);
         $active = shm_get_var($shm, ACTIVE_USERS);
 
-        // shm_put_var($shm, ACTIVE_USERS, $active);
         shm_detach($shm);
         sem_release($sem);
 
-        // $numUsers = $CI->config->item('jobe_max_users');
-        // $userId = $port - 3000;
         $userId = (int)explode("jobe", $jobeUser)[1];
 
         //check if there is reservation for the CREDENTIALS

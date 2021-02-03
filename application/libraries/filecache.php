@@ -1,5 +1,5 @@
 
-<?php defined('BASEPATH') OR exit('No direct script access allowed');
+<?php defined('BASEPATH') or exit('No direct script access allowed');
 /*
  *
  * This program is free software: you can redistribute it and/or modify
@@ -73,7 +73,7 @@ class FileCache {
         $freespace = disk_free_space(FILE_CACHE_BASE);
         $volumesize = disk_total_space(FILE_CACHE_BASE);
         if (TESTING_FILE_CACHE_CLEAR || $freespace / $volumesize > MAX_PERCENT_FULL) {
-            self:: clean_cache(FILE_CACHE_BASE);
+            self::clean_cache(FILE_CACHE_BASE);
         }
         if (preg_match(MD5_PATTERN, $fileid) !== 1) {
             $result = @file_put_contents(FILE_CACHE_BASE . '/' . $fileid, $contents);
@@ -97,16 +97,16 @@ class FileCache {
 
         // Check if directory exist and make dir
         $dirExists = is_dir('/home/jobe/runs/' . $dir);
-        if(!$dirExists) {
-            mkdir('/home/jobe/runs/' . $dir);
+        if (!$dirExists) {
+            mkdir('/home/jobe/runs/' . $dir, 0751, true);
         }
-        
+
         $freespace = disk_free_space(FILE_RUN_BASE);
         $volumesize = disk_total_space(FILE_RUN_BASE);
         if (TESTING_FILE_CACHE_CLEAR || $freespace / $volumesize > MAX_PERCENT_FULL) {
-            self:: clean_cache(FILE_RUN_BASE);
+            self::clean_cache(FILE_RUN_BASE);
         }
-            $result = @file_put_contents('/home/jobe/runs/' . $dir . '/' . $fileid, $contents);
+        $result = @file_put_contents('/home/jobe/runs/' . $dir . '/' . $fileid, $contents);
         return $result;
     }
 
