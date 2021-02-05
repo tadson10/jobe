@@ -113,58 +113,55 @@ class Restapi extends REST_Controller {
     // Put (i.e. create or update) a file
     public function file_put($fileId = FALSE) {
         $response = array("message" => '', "port" => null, "jobeUser" => null, "randomValue" => null);
+        try {
+            // Check PORT reservation
+            $port = $this->put("port", FALSE);
+            $randomValue = $this->put("randomValue", FALSE);
+            $jobeUser = $this->put("jobeUser", FALSE);
 
-        // Check PORT reservation
-        $port = $this->put("port", FALSE);
-        $randomValue = $this->put("randomValue", FALSE);
-        $jobeUser = $this->put("jobeUser", FALSE);
+            $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
 
-        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
+            // Reservation doesn't exist
+            if (!$userSM) {
+                $this->response("Reservation expired. Please reserve JOBE user and try again.", 403);
+            }
 
-        // Reservation doesn't exist
-        if (!$userSM) {
-            $response["message"] = "Reservation expired. Please reserve JOBE user and try again.";
-            $response["port"] = $port;
-            $response["jobeUser"] = $jobeUser;
-            $response["randomValue"] = $randomValue;
+            // Nastavimo za primer, ko poleg API KEY pošlje uporabnik še CREDENTIALS, ki pa so lahko napačni
+            $port = $userSM[5];
+            $randomValue = $userSM[2];
+            $jobeUser = $userSM[4];
 
-            $this->response($response, 403);
+            if ($fileId === FALSE) {
+                $this->error('No file id in URL');
+            }
+            $contentsb64 = $this->put('file_contents', FALSE);
+            if ($contentsb64 === FALSE) {
+                $this->error('put: missing file_contents parameter');
+            }
+
+            $contents = base64_decode($contentsb64, TRUE);
+            if ($contents === FALSE) {
+                $this->error("put: contents of file $fileId are not valid base-64");
+            }
+
+            $dir = $jobeUser . "_" . $port . "_" . $randomValue;
+            // All files except `app.js` are saved in /public
+            if ($fileId != "app.js")
+                $dir = $dir . "/public";
+
+            if ($fileId == "app.js")
+                $fileId = "app";
+
+            if (FileCache::save_file($fileId, $contents, $dir) === FALSE) {
+                $this->error("Failed to save file <strong>$fileId</strong>.", 500);
+            }
+
+            $len = strlen($contents);
+            $this->log('debug', "Put file $fileId, size $len");
+            $this->response("File uploaded successfully!", 201);
+        } catch (Throwable  $t) {
+            $this->response("Error occurred while trying to save file to JOBE server. Please try again later.", 500);
         }
-
-        // Nastavimo za primer, ko poleg API KEY pošlje uporabnik še CREDENTIALS, ki pa so lahko napačni
-        $port = $userSM[5];
-        $randomValue = $userSM[2];
-        $jobeUser = $userSM[4];
-
-        if ($fileId === FALSE) {
-            $this->error('No file id in URL');
-        }
-        $contentsb64 = $this->put('file_contents', FALSE);
-        if ($contentsb64 === FALSE) {
-            $this->error('put: missing file_contents parameter');
-        }
-
-        $contents = base64_decode($contentsb64, TRUE);
-        if ($contents === FALSE) {
-            $this->error("put: contents of file $fileId are not valid base-64");
-        }
-
-        $dir = $jobeUser . "_" . $port . "_" . $randomValue;
-        // All files except `app.js` are saved in /public
-        if ($fileId != "app.js")
-            $dir = $dir . "/public";
-
-        if ($fileId == "app.js")
-            $fileId = "app";
-
-        if (FileCache::save_file($fileId, $contents, $dir) === FALSE) {
-            $this->error("Failed to save file <strong>$fileId</strong>.", 500);
-        }
-
-        $len = strlen($contents);
-        $this->log('debug', "Put file $fileId, size $len");
-        $response["message"] = "File uploaded successfully!";
-        $this->response($response, 201);
     }
 
 
@@ -192,33 +189,32 @@ class Restapi extends REST_Controller {
     //  STOP SERVER AT PORT
     // ****************************
     public function stop_post() {
-        // Check PORT reservation
-        $port = $this->post('port', FALSE);
-        $jobeUser = $this->post('jobeUser', FALSE);
-        $randomValue = $this->post('randomValue', FALSE);
+        try {
+            // Check PORT reservation
+            $port = $this->post('port', FALSE);
+            $jobeUser = $this->post('jobeUser', FALSE);
+            $randomValue = $this->post('randomValue', FALSE);
 
-        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
+            $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, TRUE);
 
-        // Reservation doesn't exist
-        if (!$userSM) {
-            $odgovor["message"] = "Reservation expired. Please reserve JOBE user and try again.";
-            $odgovor["port"] = $port;
-            $odgovor["jobeUser"] = $jobeUser;
-            $odgovor["randomValue"] = $randomValue;
+            // Reservation doesn't exist
+            if (!$userSM) {
+                $this->response("Reservation expired. Please reserve JOBE user and try again.", 403);
+            }
 
-            $this->response($odgovor, 403);
-        }
+            // Get values directly from shared memory
+            $port = $userSM[5];
+            $randomValue = $userSM[2];
+            $jobeUser = $userSM[4];
 
-        // Get values directly from shared memory
-        $port = $userSM[5];
-        $randomValue = $userSM[2];
-        $jobeUser = $userSM[4];
-
-        if ($userSM) {
-            exec("sudo /usr/bin/pkill -9 -u {$jobeUser}"); // Kill any remaining processes
-            $this->response("Node.js app was stopped.", 201);
-        } else {
-            $this->response("JOBE user reservation expired.", 500);
+            if ($userSM) {
+                exec("sudo /usr/bin/pkill -9 -u {$jobeUser}"); // Kill any remaining processes
+                $this->response("Node.js app was stopped.", 201);
+            } else {
+                $this->response("JOBE user reservation expired.", 500);
+            }
+        } catch (Throwable $t) {
+            $this->response("An error occured while trying to stop execution of NodeJS app.", 500);
         }
     }
 
@@ -243,12 +239,7 @@ class Restapi extends REST_Controller {
 
         // Reservation doesn't exist
         if (!$userSM) {
-            $odgovor["message"] = "Reservation expired. Please reserve JOBE user and try again.";
-            $odgovor["port"] = $port;
-            $odgovor["jobeUser"] = $jobeUser;
-            $odgovor["randomValue"] = $randomValue;
-
-            $this->response($odgovor, 403);
+            $this->response("Reservation expired. Please reserve JOBE user and try again.", 403);
         }
 
         global $CI;
@@ -370,66 +361,68 @@ class Restapi extends REST_Controller {
     // Checks if we already have reservation for API KEY
     // If not it reserves PORT (and JOBE user) for this API KEY and returns credentials (port, jobeUser, randomValue)
     public function free_ports_post() {
-        $odgovor = array("message" => '', "port" => null, "jobeUser" => null, "randomValue" => null);
-        $apiKey = null;
-        $isOldUser = false;
+        try {
+            $response = array("message" => '', "port" => null, "jobeUser" => null, "randomValue" => null);
+            $apiKey = null;
+            $isOldUser = false;
 
-        $port = $this->post("port");
-        $randomValue = $this->post("randomValue");
-        $jobeUser = $this->post("jobeUser");
+            $port = $this->post("port");
+            $randomValue = $this->post("randomValue");
+            $jobeUser = $this->post("jobeUser");
 
-        // Check if all ports are used and remove those with expired reservation
-        $array = $this->findAndRemoveExpiredPortReservations();
-        $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, FALSE);
-        // We founnd reserved port for this user
-        if ($userSM)
-            $isOldUser = true;
+            // Check if all ports are used and remove those with expired reservation
+            $array = $this->findAndRemoveExpiredPortReservations();
+            $userSM = $this->getJobeUser($port, $jobeUser, $randomValue, FALSE);
+            // We founnd reserved port for this user
+            if ($userSM)
+                $isOldUser = true;
 
-        // We didn't find reservation for user with this API KEY or CREDENTIALS
-        if (!$isOldUser) {
-            // get API KEY from header
-            $header = apache_request_headers();
-            $apiKeyExists = array_key_exists("X-API-KEY", $header);
-            // If API KEY exists, we check if reservation exists for this api key
-            if ($apiKeyExists) {
-                $apiKey = $header["X-API-KEY"];
+            // We didn't find reservation for user with this API KEY or CREDENTIALS
+            if (!$isOldUser) {
+                // get API KEY from header
+                $header = apache_request_headers();
+                $apiKeyExists = array_key_exists("X-API-KEY", $header);
+                // If API KEY exists, we check if reservation exists for this api key
+                if ($apiKeyExists) {
+                    $apiKey = $header["X-API-KEY"];
+                }
+
+                // Get JOBE user
+                require_once($this->get_path_for_language_task('nodejs'));
+                $userId = FALSE;
+                try {
+                    // Create the task.
+                    $task = new Nodejs_Task("", "", "");
+
+                    // Allocate one of the Jobe users.
+                    $userSM = $task->getFreeUser($apiKey);
+                    $task = null;
+                } catch (OverloadException $e) {
+                    $this->response('No Jobe user is available at the moment, please try again later!', 500);
+                }
             }
 
-            // Get JOBE user
-            require_once($this->get_path_for_language_task('nodejs'));
-            $userId = FALSE;
-            try {
-                // Create the task.
-                $task = new Nodejs_Task("", "", "");
+            // read jobe user properties (credentials)
+            $port = $userSM[5];
+            $jobeUser = $userSM[4];
+            $randomValue = $userSM[2];
 
-                // Allocate one of the Jobe users.
-                $userSM = $task->getFreeUser($apiKey);
-                $task = null;
-            } catch (OverloadException $e) {
-                $odgovor["message"] = 'No ports are available at the moment, please try again later!';
-                $this->response($odgovor, 500);
+            // Create folder to reserve PORT
+            // Folder is created when PORT is reserved for the first time
+            // If it is OLD jobe user, we just send response
+            $dir = $jobeUser . "_" . $port . "_" . $randomValue;
+            if ((!$isOldUser && mkdir("/home/jobe/runs/" . $dir) && mkdir("/home/jobe/runs/" . $dir . "/public")) || $isOldUser) {
+                // If folder creation was successful
+                // return credentials
+                $response["port"] = $port;
+                $response["jobeUser"] = $jobeUser;
+                $response["randomValue"] = $randomValue;
+                $this->response($response, 200);
+            } else {
+                $this->response("Problem getting free port. Please try again later.", 500);
             }
-        }
-
-        // read jobe user properties (credentials)
-        $port = $userSM[5];
-        $jobeUser = $userSM[4];
-        $randomValue = $userSM[2];
-
-        // Create folder to reserve PORT
-        // Folder is created when PORT is reserved for the first time
-        // If it is OLD jobe user, we just send response
-        $dir = $jobeUser . "_" . $port . "_" . $randomValue;
-        if ((!$isOldUser && mkdir("/home/jobe/runs/" . $dir) && mkdir("/home/jobe/runs/" . $dir . "/public")) || $isOldUser) {
-            // If folder creation was successful
-            // return credentials
-            $odgovor["port"] = $port;
-            $odgovor["jobeUser"] = $jobeUser;
-            $odgovor["randomValue"] = $randomValue;
-            $this->response($odgovor, 200);
-        } else {
-            $odgovor["message"] = "Problem getting free port. Please try again later.";
-            $this->response($odgovor, 500);
+        } catch (Throwable $t) {
+            $this->response("Problem reserving JOBE user.", 500);
         }
     }
 
