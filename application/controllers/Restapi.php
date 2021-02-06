@@ -240,6 +240,12 @@ class Restapi extends REST_Controller {
         // Reservation doesn't exist
         if (!$userSM) {
             $this->response("Reservation expired. Please reserve JOBE user and try again.", 403);
+        } else {
+            // Check if anyone is using this port and kill all processes for that user
+            $userName = exec("sudo lsof -n -i :{$port} | awk '{print $3}' | tail -n1");
+            if ($userName != "") {
+                exec("sudo /usr/bin/pkill -9 -u {$userName}"); // Kill any remaining processes
+            }
         }
 
         global $CI;
