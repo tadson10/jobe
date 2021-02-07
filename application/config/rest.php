@@ -1,6 +1,6 @@
 <?php
 
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
 /*
 |--------------------------------------------------------------------------
@@ -44,8 +44,8 @@ $config['rest_default_format'] = 'json';
 |
 */
 $config['rest_supported_formats'] = [
-    'json',
-/*    'array',
+  'json',
+  /*    'array',
     'csv',
     'html',
     'jsonp',
@@ -394,7 +394,7 @@ $config['rest_key_name'] = 'X-API-KEY';
 |       `id` INT(11) NOT NULL AUTO_INCREMENT,
 |       `uri` VARCHAR(255) NOT NULL,
 |       `method` VARCHAR(6) NOT NULL,
-|       `params` TEXT DEFAULT NULL,
+|       `params` MEDIUMTEXT DEFAULT NULL,
 |       `api_key` VARCHAR(40) NOT NULL,
 |       `ip_address` VARCHAR(45) NOT NULL,
 |       `time` INT(11) NOT NULL,
@@ -405,7 +405,7 @@ $config['rest_key_name'] = 'X-API-KEY';
 |   ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 |
 */
-$config['rest_enable_logging'] = FALSE;
+$config['rest_enable_logging'] = TRUE;
 
 /*
 |--------------------------------------------------------------------------
@@ -460,7 +460,7 @@ $config['rest_access_table'] = 'access';
 | Set to FALSE to log as serialized PHP
 |
 */
-$config['rest_logs_json_params'] = FALSE;
+$config['rest_logs_json_params'] = TRUE;
 
 /*
 |--------------------------------------------------------------------------
