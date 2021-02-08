@@ -112,7 +112,6 @@ class Restapi extends REST_Controller {
     //TadejS
     // Put (i.e. create or update) a file
     public function file_put($fileId = FALSE) {
-        $response = array("message" => '', "port" => null, "jobeUser" => null, "randomValue" => null);
         try {
             // Check PORT reservation
             $port = $this->put("port", FALSE);
@@ -125,11 +124,6 @@ class Restapi extends REST_Controller {
             if (!$userSM) {
                 $this->response("Reservation expired. Please reserve JOBE user and try again.", 403);
             }
-
-            // Nastavimo za primer, ko poleg API KEY pošlje uporabnik še CREDENTIALS, ki pa so lahko napačni
-            $port = $userSM[5];
-            $randomValue = $userSM[2];
-            $jobeUser = $userSM[4];
 
             if ($fileId === FALSE) {
                 $this->error('No file id in URL');
@@ -368,7 +362,6 @@ class Restapi extends REST_Controller {
     // If not it reserves PORT (and JOBE user) for this API KEY and returns credentials (port, jobeUser, randomValue)
     public function free_ports_post() {
         try {
-            $response = array("message" => '', "port" => null, "jobeUser" => null, "randomValue" => null);
             $apiKey = null;
             $isOldUser = false;
 
@@ -549,53 +542,6 @@ class Restapi extends REST_Controller {
             }
         }
         return false;
-    }
-
-    // Returns save credentials for JOBE user from SHARED MEMORY for those credentials
-    private function getJobeUserByCredentials($port = FALSE, $jobeUser = FALSE, $randomValue = FALSE) {
-        if (!$port || !$jobeUser || !$randomValue)
-            return null;
-
-        $file = __FILE__; //"/var/www/html/jobe/application/controllers/Restapi.php";
-        $key = ftok(__DIR__ . "/../libraries/LanguageTask.php", 'j');
-        $sem = sem_get($key);
-        sem_acquire($sem);
-        $shm = shm_attach($key);
-        $active = shm_get_var($shm, ACTIVE_USERS);
-
-        shm_detach($shm);
-        sem_release($sem);
-
-        $userId = (int)explode("jobe", $jobeUser)[1];
-
-        //check if there is reservation for the CREDENTIALS
-        if ($active[$userId][2] == $randomValue && $active[$userId][4] == $jobeUser && $active[$userId][5] == $port) {
-            // add index to object
-            $tmp = $active[$userId];
-            $tmp[6] = $userId;
-            return $tmp;
-        }
-
-        return false;
-    }
-
-
-    //returns saved info for particular JOBE user with index = $jobeUserId
-    private function getJobeUserByUserId($jobeUserId = FALSE) {
-        if (!$jobeUserId && $jobeUserId != 0)
-            return null;
-
-        $file = __FILE__; //"/var/www/html/jobe/application/controllers/Restapi.php";
-        $key = ftok(__DIR__ . "/../libraries/LanguageTask.php", 'j');
-        $sem = sem_get($key);
-        sem_acquire($sem);
-        $shm = shm_attach($key);
-        $active = shm_get_var($shm, ACTIVE_USERS);
-
-        // shm_put_var($shm, ACTIVE_USERS, $active);
-        shm_detach($shm);
-        sem_release($sem);
-        return $active[$jobeUserId];
     }
 
     // removes directory recursively for credential

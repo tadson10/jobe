@@ -1,4 +1,4 @@
-<?php defined('BASEPATH') OR exit('No direct script access allowed');
+<?php defined('BASEPATH') or exit('No direct script access allowed');
 
 /* ==============================================================
  *
@@ -61,8 +61,6 @@ abstract class Task {
         'numprocs'      => 5        // processes
     );
 
-    public $maxTimelimit = 600;
-
     public $id;             // The task id - use the workdir basename
     public $input;          // Stdin for this task
     public $sourceFileName; // The name to give the source file
@@ -106,21 +104,21 @@ abstract class Task {
     // server user is) and has access rights of 771. If it's readable by
     // any of the jobe<n> users, running programs will be able
     // to hoover up other students' submissions.
-    public function prepare_execution_environment($userSm = NULL) {
-        
+    public function prepare_execution_environment($userSM = NULL) {
+
         // Create the temporary directory that will be used.
-        $this->workdir = "/home/jobe/runs/".$userSm[4]."_".$userSm[5]."_".$userSm[2];
+        $this->workdir = "/home/jobe/runs/" . $userSM[4] . "_" . $userSM[5] . "_" . $userSM[2];
         /*$this->workdir = tempnam("/home/jobe/runs", "jobe_");
 
         if (!unlink($this->workdir) || !mkdir($this->workdir)) {
             log_message('error', 'LanguageTask constructor: error making temp directory');
             throw new Exception("Task: error making temp directory (race error?)");
         }*/
-        if(is_dir($this->workdir))
+        if (is_dir($this->workdir))
             chdir($this->workdir);
         else
             throw new Exception('Working directory not found. Please, resend your files.');
-        
+
 
         $this->id = basename($this->workdir);
 
@@ -130,11 +128,7 @@ abstract class Task {
         }
         file_put_contents($this->workdir . '/' . $this->sourceFileName, $sourceCode);
 */
-        // Allocate one of the Jobe users.
-        // $this->userId = $this->getFreeUser();
-        // $this->userId = 3000 - $run->port;
-        // $this->user = sprintf("jobe%02d", $this->userId);
-        $this->user = $userSm[4];
+        $this->user = $userSM[4];
 
         // Give the user RW access.
         exec("setfacl -m u:{$this->user}:rwX {$this->workdir}");
@@ -149,11 +143,16 @@ abstract class Task {
             $fileId = $file[0];
             $filename = $file[1];
             $destPath = $this->workdir . '/' . $filename;
-            if (!FileCache::file_exists($fileId) ||
-               ($contents = FileCache::file_get_contents($fileId)) === FALSE ||
-               (file_put_contents($destPath, $contents)) === FALSE) {
-                throw new JobException('One or more of the specified files is missing/unavailable',
-                        'file(s) not found', 404);
+            if (
+                !FileCache::file_exists($fileId) ||
+                ($contents = FileCache::file_get_contents($fileId)) === FALSE ||
+                (file_put_contents($destPath, $contents)) === FALSE
+            ) {
+                throw new JobException(
+                    'One or more of the specified files is missing/unavailable',
+                    'file(s) not found',
+                    404
+                );
             }
         }
     }
@@ -169,20 +168,18 @@ abstract class Task {
         try {
             // Add port information to "nodejs" command
             $cmd = "";
-            if($run->language_id == "nodejs")
-                $cmd = 'PORT='.$run->port.' ';
+            if ($run->language_id == "nodejs")
+                $cmd = 'PORT=' . $run->port . ' ';
             $cmd = $cmd . implode(' ', $this->getRunCommand());
-            
+
 
             list($this->stdout, $this->stderr) = $this->run_in_sandbox($cmd, false, $this->input);
             $this->stderr = $this->filteredStderr();
             $this->diagnose_result();  // Analyse output and set result
-        }
-        catch (OverloadException $e) {
+        } catch (OverloadException $e) {
             $this->result = Task::RESULT_SERVER_OVERLOAD;
             $this->stderr = $e->getMessage();
-        }
-        catch (Exception $e) {
+        } catch (Exception $e) {
             $this->result = Task::RESULT_INTERNAL_ERR;
             $this->stderr = $e->getMessage();
         }
@@ -195,7 +192,7 @@ abstract class Task {
         if ($this->userId !== null) {
             exec("sudo /usr/bin/pkill -9 -u {$this->user}"); // Kill any remaining processes
             $this->removeTemporaryFiles($this->user);
-            // $this->freeUser($this->userId);
+
             $this->userId = null;
             $this->user = null;
         }
@@ -232,7 +229,7 @@ abstract class Task {
             if (!shm_has_var($shm, ACTIVE_USERS)) {
                 // First time since boot -- initialise active list
                 $active = array();
-                for($i = 0; $i < $numUsers; $i++) {
+                for ($i = 0; $i < $numUsers; $i++) {
                     $active[$i][0] = FALSE;
                     $active[$i][1] = null;
                     $active[$i][2] = null;
@@ -246,27 +243,26 @@ abstract class Task {
             for ($user = 0; $user < $numUsers; $user++) {
                 if (!$active[$user][0]) {
                     // random value
-                    $str=rand(); 
+                    $str = rand();
                     $randomValue = md5($str);
 
                     // Find random free port
                     $port = $this->generateRandomPort($active);
                     // If we find free port
-                    if($port) {
+                    if ($port) {
                         $active[$user][0] = TRUE;
-                        $active[$user][1] = time() + 60*60;
+                        $active[$user][1] = time() + 60 * 60;
                         $active[$user][2] = $randomValue;
                         $active[$user][3] = $apiKey;
                         $active[$user][4] = sprintf("jobe%02d", $user);
                         $active[$user][5] = $port;
                         shm_put_var($shm, ACTIVE_USERS, $active);
-                    }
-                    else {
+                    } else {
                         shm_detach($shm);
                         sem_release($sem);
                         throw new OverloadException();
                     }
-                    
+
                     break;
                 }
             }
@@ -287,22 +283,21 @@ abstract class Task {
 
     // Check if port  is already used
     private function checkPort($active = FALSE, $port) {
-        for($i = 0; $i < count($active); $i++) {
-            if($active[$i][5] == $port)
+        for ($i = 0; $i < count($active); $i++) {
+            if ($active[$i][5] == $port)
                 return false;
         }
         return true;
-
     }
 
     // Generates random port number
     private function generateRandomPort($active) {
         // try 2 times and then return FALSE / TRUE
-        for($i = 0; $i < 2; $i++) {
+        for ($i = 0; $i < 2; $i++) {
             $port = rand(3000, 3200);
             $isPortOk = $this->checkPort($active, $port);
 
-            if($isPortOk)
+            if ($isPortOk)
                 return $port;
         }
         return false;
@@ -340,7 +335,7 @@ abstract class Task {
      * @return array a two element array of the standard output and the standard error
      * from running the given command.
      */
-    public function run_in_sandbox($wrappedCmd, $iscompile=true, $stdin=null) {
+    public function run_in_sandbox($wrappedCmd, $iscompile = true, $stdin = null) {
         $filesize = 1000 * $this->getParam('disklimit', $iscompile); // MB -> kB
         $streamsize = 1000 * $this->getParam('streamsize', $iscompile); // MB -> kB
         $memsize = 1000 * $this->getParam('memorylimit', $iscompile);
@@ -348,21 +343,22 @@ abstract class Task {
         $killtime = 2 * $cputime; // Kill the job after twice the allowed cpu time
         $numProcs = $this->getParam('numprocs', $iscompile) + 1; // The + 1 allows for the sh command below.
         $sandboxCommandBits = array(
-                "sudo " . dirname(__FILE__)  . "/../../runguard/runguard",
-                "--user={$this->user}",
-                "--group=jobe",
-                "--cputime=$cputime",      // Seconds of execution time allowed
-                "--time=$killtime",        // Wall clock kill time
-                "--filesize=$filesize",    // Max file sizes
-                "--nproc=$numProcs",       // Max num processes/threads for this *user*
-                "--no-core",
-                "--streamsize=$streamsize");   // Max stdout/stderr sizes
+            "sudo " . dirname(__FILE__)  . "/../../runguard/runguard",
+            "--user={$this->user}",
+            "--group=jobe",
+            "--cputime=$cputime",      // Seconds of execution time allowed
+            "--time=$killtime",        // Wall clock kill time
+            "--filesize=$filesize",    // Max file sizes
+            "--nproc=$numProcs",       // Max num processes/threads for this *user*
+            "--no-core",
+            "--streamsize=$streamsize"
+        );   // Max stdout/stderr sizes
 
         if ($memsize != 0) {  // Special case: Matlab won't run with a memsize set. TODO: WHY NOT!
             $sandboxCommandBits[] = "--memsize=$memsize";
         }
         $sandboxCmd = implode(' ', $sandboxCommandBits) .
-                ' sh -c ' . escapeshellarg($wrappedCmd) . ' >prog.out 2>prog.err';
+            ' sh -c ' . escapeshellarg($wrappedCmd) . ' >prog.out 2>prog.err';
 
         // CD into the work directory and run the job
         $workdir = $this->workdir;
@@ -373,8 +369,7 @@ abstract class Task {
             fwrite($f, $stdin);
             fclose($f);
             $sandboxCmd .= " <prog.in\n";
-        }
-        else {
+        } else {
             $sandboxCmd .= " </dev/null\n";
         }
 
@@ -399,7 +394,7 @@ abstract class Task {
      * in $min_params_compile (except if it's 0 meaning no limit), the minimum
      * value is used instead.
      */
-    protected function getParam($key, $iscompile=false) {
+    protected function getParam($key, $iscompile = false) {
         if (isset($this->params) && array_key_exists($key, $this->params)) {
             $param = $this->params[$key];
         } else {
@@ -408,8 +403,10 @@ abstract class Task {
         // ** BUG ** The min_params_compile value is being applied even if
         // this is not a compile. I'm reluctant to fix, however, as it may
         // break existing questions with inappropriately low resource settings.
-        if ($param != 0 && array_key_exists($key, $this->min_params_compile) &&
-                $this->min_params_compile[$key] > $param) {
+        if (
+            $param != 0 && array_key_exists($key, $this->min_params_compile) &&
+            $this->min_params_compile[$key] > $param
+        ) {
             $param = $this->min_params_compile[$key];
         }
         return $param;
@@ -514,7 +511,7 @@ abstract class Task {
             $this->result = Task::RESULT_TIME_LIMIT;
             $this->signal = 9;
             $this->stderr = '';
-        } else if(strpos($this->stderr, "warning: command terminated with signal 11")) {
+        } else if (strpos($this->stderr, "warning: command terminated with signal 11")) {
             $this->signal = 11;
             $this->stderr = '';
         }
@@ -527,11 +524,11 @@ abstract class Task {
             $this->result = Task::RESULT_COMPILATION_ERROR;
         }
         return new ResultObject(
-                $this->workdir,
-                $this->result,
-                $this->cmpinfo,
-                $this->filteredStdout(),
-                $this->filteredStderr()
+            $this->workdir,
+            $this->result,
+            $this->cmpinfo,
+            $this->filteredStdout(),
+            $this->filteredStderr()
         );
     }
 
@@ -542,7 +539,7 @@ abstract class Task {
         global $CI;
         $path = $CI->config->item('clean_up_path');
         $dirs = explode(';', $path);
-        foreach($dirs as $dir) {
+        foreach ($dirs as $dir) {
             exec("sudo /usr/bin/find $dir/ -user $user -delete");
         }
     }
@@ -558,7 +555,8 @@ abstract class Task {
     // preg_match. See getVersion below for details.
     // Should be implemented by all subclasses. [Older versions of PHP
     // don't allow me to declare this abstract. But it is!!]
-    public static function getVersionCommand() {}
+    public static function getVersionCommand() {
+    }
 
 
     // Return a string giving the version of language supported by this
