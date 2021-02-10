@@ -637,17 +637,17 @@ abstract class REST_Controller extends CI_Controller {
      */
     public function _remap($object_called, $arguments = []) {
         global $CI;
+        if (array_key_exists('Content-Length', $this->_args)) {
+            // Prevent logging and accepting too large requests
+            $contentLength = $this->_args['Content-Length'];
+            $maxContentLength = $CI->config->item('max_content_length');
 
-        // Prevent logging and accepting too large requests
-        $contentLength = $this->_args['Content-Length'];
-        $maxContentLength = $CI->config->item('max_content_length');
-
-        if ($contentLength > $maxContentLength) {
-            $this->_args = 'Request has too much data. Limit is ' . floor($maxContentLength / 1024) . ' kB. ' . 'Content-Length: ' . floor($contentLength / 1024) . " kB";
-            $this->_log_request();
-            $this->response('Request has too much data. Limit is ' . floor($maxContentLength / 1024) . ' kB.', 403);
+            if ($contentLength > $maxContentLength) {
+                $this->_args = 'Request has too much data. Limit is ' . floor($maxContentLength / 1024) . ' kB. ' . 'Content-Length: ' . floor($contentLength / 1024) . " kB";
+                $this->_log_request();
+                $this->response('Request has too much data. Limit is ' . floor($maxContentLength / 1024) . ' kB.', 403);
+            }
         }
-
         // Should we answer if not over SSL?
         if ($this->config->item('force_https') && $this->request->ssl === FALSE) {
             $this->response([
