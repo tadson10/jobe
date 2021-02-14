@@ -225,7 +225,9 @@ abstract class Task {
         $retries = 0;
         while ($user == -1) {  // Loop until we have a user (or an OverloadException is thrown)
             sem_acquire($sem);
-            $shm = shm_attach($key);
+            // Change default permission to 600 (read/write only by owner)
+            // 10000 is the default shm size
+            $shm = shm_attach($key, 10000, 0600);
             if (!shm_has_var($shm, ACTIVE_USERS)) {
                 // First time since boot -- initialise active list
                 $active = array();
@@ -388,17 +390,25 @@ abstract class Task {
 
     /*
      * Get the value of the job parameter $key, which is taken from the
-     * value copied into $this from the run request if present of from the
+     * value copied into $this from the run request if present or from the
      * system defaults otherwise.
+     * If a non-numeric value is provided for a parameter that has a numeric
+     * default, the default is used instead. This prevents command injection
+     * as per issue #39 (https://github.com/trampgeek/jobe/issues/39). Thanks
+     * Marlon (myxl).
      * If $iscompile is true and the parameter value is less than that specified
      * in $min_params_compile (except if it's 0 meaning no limit), the minimum
      * value is used instead.
      */
     protected function getParam($key, $iscompile = false) {
+        $default = $this->default_params[$key];
         if (isset($this->params) && array_key_exists($key, $this->params)) {
             $param = $this->params[$key];
+            if (is_numeric($default) && !is_numeric($param)) {
+                $param = $default; // Prevent command injection attacks.
+            }
         } else {
-            $param = $this->default_params[$key];
+            $param = $default;
         }
         // ** BUG ** The min_params_compile value is being applied even if
         // this is not a compile. I'm reluctant to fix, however, as it may

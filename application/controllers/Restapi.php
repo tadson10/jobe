@@ -349,7 +349,9 @@ class Restapi extends REST_Controller {
         if (!is_array($run) || !isset($run['language_id'])) {
             $this->error('runs_post: invalid run specification', 400);
         }
-
+        if (isset($run['sourcefilename']) && !$this->is_valid_source_filename($run['sourcefilename'])) {
+            $this->error('runs_post: invalid sourcefilename');
+        }
         // REST_Controller has called to_array on the JSON decoded
         // object, so we must first turn it back into an object.
         $run = (object) $run;
@@ -501,7 +503,6 @@ class Restapi extends REST_Controller {
 
                 // Get JOBE user
                 require_once($this->get_path_for_language_task('nodejs'));
-                $userId = FALSE;
                 try {
                     // Create the task.
                     $task = new Nodejs_Task("", "", "");
@@ -523,7 +524,7 @@ class Restapi extends REST_Controller {
             // Folder is created when PORT is reserved for the first time
             // If it is OLD jobe user, we just send response
             $dir = $jobeUser . "_" . $port . "_" . $randomValue;
-            if ((!$isOldUser && mkdir("/home/jobe/runs/" . $dir) && mkdir("/home/jobe/runs/" . $dir . "/public")) || $isOldUser) {
+            if ((!$isOldUser && mkdir("/home/jobe/runs/" . $dir, 0751) && mkdir("/home/jobe/runs/" . $dir . "/public",  0751)) || $isOldUser) {
                 // If folder creation was successful
                 // return credentials
                 $response["port"] = $port;
@@ -582,18 +583,18 @@ class Restapi extends REST_Controller {
         $key = ftok(__DIR__ . "/../libraries/LanguageTask.php", 'j');
         $sem = sem_get($key);
         sem_acquire($sem);
-        $shm = shm_attach($key);
+        $shm = shm_attach($key, 10000, 0600);
 
         if (!shm_has_var($shm, ACTIVE_USERS)) {
             // First time since boot -- initialise active list
             $active = array();
             for ($i = 0; $i < $numUsers; $i++) {
                 $active[$i][0] = FALSE;
-                $active[$i][1] = null;
-                $active[$i][2] = null;
-                $active[$i][3] = null;
-                $active[$i][4] = null;
-                $active[$i][5] = null;
+                $active[$i][1] = null; //time
+                $active[$i][2] = null; //random value
+                $active[$i][3] = null; //api key
+                $active[$i][4] = null; //jobe user
+                $active[$i][5] = null; //port
             }
             shm_put_var($shm, ACTIVE_USERS, $active);
 
@@ -637,7 +638,7 @@ class Restapi extends REST_Controller {
         $key = ftok(__DIR__ . "/../libraries/LanguageTask.php", 'j');
         $sem = sem_get($key);
         sem_acquire($sem);
-        $shm = shm_attach($key);
+        $shm = shm_attach($key, 10000, 0600);
         $active = shm_get_var($shm, ACTIVE_USERS);
 
         shm_put_var($shm, ACTIVE_USERS, $active);
@@ -698,6 +699,26 @@ class Restapi extends REST_Controller {
     // **********************
     // Support functions
     // **********************
+
+    // Return true unless the given filename looks dangerous, e.g. has '/' or '..'
+    // substrings. Uses code from https://stackoverflow.com/questions/2021624/string-sanitizer-for-filename
+    private function is_valid_source_filename($filename) {
+        $sanitised = preg_replace(
+            '~
+        [<>:"/\\|?*]|            # file system reserved https://en.wikipedia.org/wiki/Filename#Reserved_characters_and_words
+        [\x00-\x1F]|             # control characters http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx
+        [\x7F\xA0\xAD]|          # non-printing characters DEL, NO-BREAK SPACE, SOFT HYPHEN
+        [#\[\]@!$&\'()+,;=]|     # URI reserved https://tools.ietf.org/html/rfc3986#section-2.2
+        [{}^\~`]                 # URL unsafe characters https://www.ietf.org/rfc/rfc1738.txt
+        ~x',
+            '-',
+            $filename
+        );
+        // Avoid ".", ".." or ".hiddenFiles"
+        $sanitised = ltrim($sanitised, '.-');
+        return $sanitised === $filename;
+    }
+
     private function is_valid_filespec($file) {
         return (count($file) == 2 || count($file) == 3) &&
             is_string($file[0]) &&
