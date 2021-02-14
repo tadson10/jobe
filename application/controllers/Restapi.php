@@ -307,7 +307,7 @@ class Restapi extends REST_Controller {
      *                  @OA\Property(property="jobeUser", type="string", description="Name of reserved JOBE user", default="jobe00"),
      *                  @OA\Property(property="randomValue", type="string", description="Random value that was returned by server when reserving port"),
      *                  @OA\Property(property="language_id", type="string", default="nodejs", description="Language id - must be 'nodejs'"),
-     *                  @OA\Property(property="sourcefilename", type="string", default="app", description="Name of the source file - MUST BE 'app'"),
+     *                  @OA\Property(property="sourcefilename", type="string", default="app", description="Name of the source file - must be 'app'"),
      *                  @OA\Property(property="parameters", type="object", @OA\Property(property="cputime", type="number", default=10, description="Maximux execution time"))
      *              )
      *          )    
