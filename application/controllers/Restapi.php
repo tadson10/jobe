@@ -155,7 +155,7 @@ class Restapi extends REST_Controller {
      *              @OA\Property(property="port", type="number", description="Port that was assigned to user", default=3000),
      *              @OA\Property(property="jobeUser", type="string", description="Name of reserved JOBE user", default="jobe00"),
      *              @OA\Property(property="randomValue", type="string", description="Random value that was returned by server when reserving port"),
-     *              @OA\Property(property="file_contents", type="string", format="byte", description="File contents encoded in Base64")
+     *              @OA\Property(property="file_contents", type="string", format="byte", description="File contents encoded in Base64", default="File contents encoded in Base64")
      * ) 
      *      )       
      *   ),
