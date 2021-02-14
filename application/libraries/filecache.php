@@ -93,6 +93,12 @@ class FileCache {
     }
 
     // TadejS
+    /**
+     * Insert file contents in given directory.
+     * @param string $fileid the external file id (aka filename).
+     * @param string $contents file contents.
+     * @param string $dir the directory inside /home/jobe/runs/.
+     */
     public static function save_file($fileid, $contents, $dir) {
 
         // Check if directory exist and make dir

@@ -32,6 +32,33 @@ define('LANGUAGE_CACHE_FILE', '/tmp/jobe_language_cache_file');
 
 define('ACTIVE_PORTS', 2);  // The key for the shared memory active users array
 
+/** 
+ * @OA\Info(title="JOBE API", version="1.0")
+ */
+
+/**
+ * @OA\SecurityScheme(
+ *   securityScheme="ApiKeyAuthentication",
+ *   type="apiKey",
+ *   in="header",
+ *   name="X-API-KEY"
+ * )
+ */
+
+/**
+ * @OA\Schema(schema="Unauthorized", 
+ *  @OA\Property(property="status", type="boolean", description="Status of authorization", default=false),
+ *  @OA\Property(property="error", type="string", description="Invalid api key", default="Invalid api key"))
+ * 
+ */
+
+/**
+ * @OA\Schema(schema="Language", 
+ *  @OA\Property(property="language_id", type="string", description="Language id", default="nodejs"),
+ *  @OA\Property(property="version", type="string", description="Version of language", default="10.23.3")
+ * ) 
+ */
+
 class Restapi extends REST_Controller {
     protected $languages = array();
 
@@ -87,6 +114,8 @@ class Restapi extends REST_Controller {
 
     // Put (i.e. create or update) a file
     public function files_put($fileId = FALSE) {
+        $this->response('Method is not currently available. Please use /file.', 404);
+
         if ($fileId === FALSE) {
             $this->error('No file id in URL');
         }
@@ -109,7 +138,33 @@ class Restapi extends REST_Controller {
         $this->response(NULL, 204);
     }
 
-    //TadejS
+
+    /**
+     * @OA\Put(path="/jobe/index.php/restapi/file/{fileName}", tags={"RestApi"},
+     *   security={{"ApiKeyAuthentication":{}}},
+     *   @OA\Parameter(name="fileName",
+     *      in="path",
+     *      required=true,
+     *      @OA\Schema(type="string"),
+     *      default="app.js"
+     *   ),
+     *  @OA\RequestBody(
+     *      @OA\MediaType(
+     *          mediaType="application/json",
+     *          @OA\Schema(required={"port", "randomValue", "jobeUser", "file_contents"}, 
+     *              @OA\Property(property="port", type="number", description="Port that was assigned to user", default=3000),
+     *              @OA\Property(property="jobeUser", type="string", description="Name of reserved JOBE user", default="jobe00"),
+     *              @OA\Property(property="randomValue", type="string", description="Random value that was returned by server when reserving port"),
+     *              @OA\Property(property="file_contents", type="string", format="byte", description="File contents encoded in Base64")
+     * ) 
+     *      )       
+     *   ),
+     *  @OA\Response (response="201", description="Success"),
+     *  @OA\Response (response="403", description="Access denied", @OA\JsonContent(ref="#/components/schemas/Unauthorized"))
+     * )
+     */
+
+
     // Put (i.e. create or update) a file
     public function file_put($fileId = FALSE) {
         try {
@@ -182,6 +237,24 @@ class Restapi extends REST_Controller {
     // ****************************
     //  STOP SERVER AT PORT
     // ****************************
+
+    /**
+     * @OA\Post(path="/jobe/index.php/restapi/stop", tags={"RestApi"},
+     *   security={{"ApiKeyAuthentication":{}}},
+     *  @OA\RequestBody(
+     *       @OA\MediaType(
+     *           mediaType="application/json",
+     *           @OA\Schema(required={"port", "randomValue", "jobeUser"}, 
+     *              @OA\Property(property="port", type="number", description="Port that was assigned to user", default=3000),
+     *              @OA\Property(property="jobeUser", type="string", description="Name of reserved JOBE user", default="jobe00"),
+     *              @OA\Property(property="randomValue", type="string", description="Random value that was returned by server when reserving port")
+     * ) 
+     *       )
+     *   ),
+     *  @OA\Response (response="200", description="Success"),
+     *  @OA\Response (response="403", description="Access denied", @OA\JsonContent(ref="#/components/schemas/Unauthorized"))
+     * )
+     */
     public function stop_post() {
         try {
             // Check PORT reservation
@@ -203,7 +276,7 @@ class Restapi extends REST_Controller {
 
             if ($userSM) {
                 exec("sudo /usr/bin/pkill -9 -u {$jobeUser}"); // Kill any remaining processes
-                $this->response("Node.js app was stopped.", 201);
+                $this->response("Node.js app was stopped.", 200);
             } else {
                 $this->response("JOBE user reservation expired.", 500);
             }
@@ -221,7 +294,29 @@ class Restapi extends REST_Controller {
         $this->error('runs_get: no such run or run result discarded', 200);
     }
 
-
+    //@OA\Schema(ref="#/components/schemas/Unauthorized")
+    /**
+     * @OA\Post(path="/jobe/index.php/restapi/runs", tags={"RestApi"},
+     *   security={{"ApiKeyAuthentication":{}}},
+     *  @OA\RequestBody(
+     *       @OA\MediaType(
+     *           mediaType="application/json",
+     *           @OA\Schema(required={"port", "randomValue", "jobeUser"}, 
+     *              @OA\Property(property="run_spec", type="object",
+     *                  @OA\Property(property="port", type="number", description="Port that was assigned to user", default=3000),
+     *                  @OA\Property(property="jobeUser", type="string", description="Name of reserved JOBE user", default="jobe00"),
+     *                  @OA\Property(property="randomValue", type="string", description="Random value that was returned by server when reserving port"),
+     *                  @OA\Property(property="language_id", type="string", default="nodejs", description="Language id - must be 'nodejs'"),
+     *                  @OA\Property(property="sourcefilename", type="string", default="app", description="Name of the source file - MUST BE 'app'"),
+     *                  @OA\Property(property="parameters", type="object", @OA\Property(property="cputime", type="number", default=10, description="Maximux execution time"))
+     *              )
+     *          )    
+     *       )
+     *  ),
+     *  @OA\Response (response="200", description="Success"),
+     *  @OA\Response (response="403", description="Access denied", @OA\JsonContent(ref="#/components/schemas/Unauthorized"))
+     * )
+     */
     public function runs_post() {
         $tmp = $this->post('run_spec', false);
         $port = $tmp["port"];
@@ -357,6 +452,24 @@ class Restapi extends REST_Controller {
     // **********************
     //      FREE_PORTS
     // **********************
+    /**
+     * @OA\Post(path="/jobe/index.php/restapi/free_ports", tags={"RestApi"}, position=1,
+     *  security={{"ApiKeyAuthentication":{}}},
+     *  @OA\RequestBody(
+     *       @OA\MediaType(
+     *           mediaType="application/json",
+     *           @OA\Schema( 
+     *              @OA\Property(property="port", type="integer", description="Port that was assigned to user"),
+     *              @OA\Property(property="jobeUser", type="string", description="Name of reserved JOBE user"),
+     *              @OA\Property(property="randomValue", type="string", description="Random value that was returned by server when reserving port")
+     *          )    
+     *       )
+     *   ),
+     * @OA\Response (response="200", description="Success"),
+     * @OA\Response (response="403", description="Access denied", @OA\JsonContent(ref="#/components/schemas/Unauthorized"))
+     *  
+     * )
+     */
     // Function checks if all ports are used and removes reservations that has expired (1h)
     // Checks if we already have reservation for API KEY
     // If not it reserves PORT (and JOBE user) for this API KEY and returns credentials (port, jobeUser, randomValue)
@@ -561,12 +674,23 @@ class Restapi extends REST_Controller {
     // **********************
     //      LANGUAGES
     // **********************
+
+    /**
+     * @OA\Get(path="/jobe/index.php/restapi/languages", tags={"RestApi"},
+     *  @OA\Response (response="200", description="Success", @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Language"))),
+     *  @OA\Response (response="403", description="Access denied", @OA\JsonContent(ref="#/components/schemas/Unauthorized")),
+     *  security={{"ApiKeyAuthentication":{}}}
+     * )
+     */
+
     public function languages_get() {
         $this->log('debug', 'languages_get called');
         $languages = $this->supported_languages();
         $langs = array();
         foreach ($languages as $lang => $version) {
-            $langs[] = array($lang, $version);
+            $langObj["language_id"] = $lang;
+            $langObj["version"] = $version;
+            $langs[] = $langObj;
         }
         $this->response($langs, 200);
     }

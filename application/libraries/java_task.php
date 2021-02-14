@@ -1,4 +1,4 @@
-<?php defined('BASEPATH') OR exit('No direct script access allowed');
+<?php defined('BASEPATH') or exit('No direct script access allowed');
 
 /* ==============================================================
  *
@@ -17,10 +17,10 @@ class Java_Task extends Task {
         $params['memorylimit'] = 0;    // Disregard memory limit - let JVM manage memory
         $this->default_params['numprocs'] = 256;     // Java 8 wants lots of processes
         $this->default_params['interpreterargs'] = array(
-             "-Xrs",   //  reduces usage signals by java, because that generates debug
-                       //  output when program is terminated on timelimit exceeded.
-             "-Xss8m",
-             "-Xmx200m"
+            "-Xrs",   //  reduces usage signals by java, because that generates debug
+            //  output when program is terminated on timelimit exceeded.
+            "-Xss8m",
+            "-Xmx200m"
         );
 
         if (isset($params['numprocs']) && $params['numprocs'] < 256) {
@@ -30,8 +30,8 @@ class Java_Task extends Task {
         parent::__construct($filename, $input, $params);
     }
 
-    public function prepare_execution_environment($sourceCode) {
-        parent::prepare_execution_environment($sourceCode);
+    public function prepare_execution_environment($userSM = null) {
+        parent::prepare_execution_environment($userSM = null);
 
         // Superclass calls subclasses to get filename if it's
         // not provided, so $this->sourceFileName should now be set correctly.
@@ -61,7 +61,7 @@ class Java_Task extends Task {
             $this->cmpinfo .= "WARNING: can't determine main class, so source file has been named 'prog.java', which probably won't compile.";
             return 'prog.java'; // This will probably fail
         } else {
-            return $main.'.java';
+            return $main . '.java';
         }
     }
 
@@ -85,8 +85,7 @@ class Java_Task extends Task {
         $pattern = '/(^|\W)public\s+class\s+(\w+)[^{]*\{.*?(public\s+static|static\s+public)\s+void\s+main\s*\(\s*String/ms';
         if (preg_match_all($pattern, $prog, $matches) !== 1) {
             return FALSE;
-        }
-        else {
+        } else {
             return $matches[2][0];
         }
     }
@@ -97,4 +96,3 @@ class Java_Task extends Task {
         return str_replace("\n\t", "\n        ", $this->stderr);
     }
 };
-
