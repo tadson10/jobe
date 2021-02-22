@@ -35,9 +35,13 @@
   <script src="./swagger/swagger-ui-standalone-preset.js" charset="UTF-8"> </script>
   <script>
     window.onload = function () {
+      var port = "";
+      if (location.port != "")
+        port = ":" + location.port;
+
       // Begin Swagger UI call region
       const ui = SwaggerUIBundle({
-        url: "http://" + window.location.hostname + "/jobe/application/documentation/api.php",
+        url: "http://" + window.location.hostname + port + "/jobe/application/documentation/api.php",
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [

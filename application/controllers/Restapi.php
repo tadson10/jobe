@@ -572,19 +572,8 @@ class Restapi extends REST_Controller {
         return $activeCount;
     }
 
-    // Check if any port reservation has expired (1h)
-    // Reservation is removed only if all JOBE users are taken
-    public function findAndRemoveExpiredPortReservations() {
-        global $CI;
-
-        $numUsers = $CI->config->item('jobe_max_users');
-
-        $file = __FILE__; //"/var/www/html/jobe/application/controllers/Restapi.php";
-        $key = ftok(__DIR__ . "/../libraries/LanguageTask.php", 'j');
-        $sem = sem_get($key);
-        sem_acquire($sem);
-        $shm = shm_attach($key, 10000, 0600);
-
+    // Check if list of users exists in SM and create it if it doesn't exist
+    public function initialiseSharedMem($shm, $numUsers) {
         if (!shm_has_var($shm, ACTIVE_USERS)) {
             // First time since boot -- initialise active list
             $active = array();
@@ -601,6 +590,23 @@ class Restapi extends REST_Controller {
             // remove files of all users
             $successfully = is_dir("/home/jobe/runs") && exec("sudo rm -R /home/jobe/runs/*");
         }
+    }
+    // Check if any port reservation has expired (1h)
+    // Reservation is removed only if all JOBE users are taken
+    public function findAndRemoveExpiredPortReservations() {
+        global $CI;
+
+        $numUsers = $CI->config->item('jobe_max_users');
+
+        $file = __FILE__; //"/var/www/html/jobe/application/controllers/Restapi.php";
+        $key = ftok(__DIR__ . "/../libraries/LanguageTask.php", 'j');
+        $sem = sem_get($key);
+        sem_acquire($sem);
+        $shm = shm_attach($key, 10000, 0600);
+
+        // Check if list of jobe users exist in SM
+        $this->initialiseSharedMem($shm, $numUsers);
+
         $active = shm_get_var($shm, ACTIVE_USERS);
 
         // Check if all JOBE users are taken
@@ -630,6 +636,7 @@ class Restapi extends REST_Controller {
     // $checkCred tells us if we have to check CREDENTIALS (when getting free port, we don't have to. But in every other situation we have to check it!)
     private function getJobeUserByApiKeyAndCredentials($apiKey = FALSE, $port = FALSE, $jobeUser = FALSE, $randomValue = FALSE, $checkCred = TRUE) {
         global $CI;
+        $numUsers = $CI->config->item('jobe_max_users');
 
         if (!$apiKey)
             return null;
@@ -639,13 +646,14 @@ class Restapi extends REST_Controller {
         $sem = sem_get($key);
         sem_acquire($sem);
         $shm = shm_attach($key, 10000, 0600);
-        $active = shm_get_var($shm, ACTIVE_USERS);
 
-        shm_put_var($shm, ACTIVE_USERS, $active);
+        // Check if list of jobe users exist in SM
+        $this->initialiseSharedMem($shm, $numUsers);
+
+        $active = shm_get_var($shm, ACTIVE_USERS);
         shm_detach($shm);
         sem_release($sem);
 
-        $numUsers = $CI->config->item('jobe_max_users');
 
         for ($i = 0; $i < $numUsers; $i++) {
             if ($active[$i][3] == $apiKey && (!$checkCred || ($checkCred && $active[$i][5] == $port && $active[$i][4] == $jobeUser && $active[$i][2] == $randomValue))) {
