@@ -35,10 +35,10 @@
   <script src="./swagger/swagger-ui-standalone-preset.js" charset="UTF-8"> </script>
   <script>
     window.onload = function () {
-
+      console.log(window.location);
       // Begin Swagger UI call region
       const ui = SwaggerUIBundle({
-        url: "http://" + window.location.hostname + "/jobe/application/documentation/api.php",
+        url: window.location.href + 'api.php',
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
