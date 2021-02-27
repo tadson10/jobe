@@ -296,7 +296,7 @@ abstract class Task {
     private function generateRandomPort($active) {
         // try 2 times and then return FALSE / TRUE
         for ($i = 0; $i < 2; $i++) {
-            $port = rand(3000, 3200);
+            $port = rand(3000, 3100);
             $isPortOk = $this->checkPort($active, $port);
 
             if ($isPortOk)

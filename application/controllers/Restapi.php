@@ -30,7 +30,6 @@ define('MAX_READ', 4096);  // Max bytes to read in popen
 define('MIN_FILE_IDENTIFIER_SIZE', 8);
 define('LANGUAGE_CACHE_FILE', '/tmp/jobe_language_cache_file');
 
-define('ACTIVE_PORTS', 2);  // The key for the shared memory active users array
 
 /** 
  * @OA\Info(title="JOBE API", version="1.0")
