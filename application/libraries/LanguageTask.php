@@ -169,7 +169,7 @@ abstract class Task {
             // Add port information to "nodejs" command
             $cmd = "";
             if ($run->language_id == "nodejs")
-                $cmd = 'PORT=' . $run->port . ' ';
+                $cmd = 'PORT=' . $run->port . ' NODE_PATH=/usr/local/lib/node_modules' . ' ';
             $cmd = $cmd . implode(' ', $this->getRunCommand());
 
 
