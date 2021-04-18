@@ -202,9 +202,6 @@ class Restapi extends REST_Controller {
             if ($fileId != "app.js")
                 $dir = $dir . "/public";
 
-            if ($fileId == "app.js")
-                $fileId = "app";
-
             if (FileCache::save_file($fileId, $contents, $dir) === FALSE) {
                 $this->error("Failed to save file <strong>$fileId</strong>.", 500);
             }
