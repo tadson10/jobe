@@ -58,6 +58,15 @@ define('LANGUAGE_CACHE_FILE', '/tmp/jobe_language_cache_file');
  * ) 
  */
 
+/**
+ *   @OA\Schema(schema="Credentials",
+ *       @OA\Property(property="port", type="integer", description="Port that was assigned to user", defualt=3000),
+ *       @OA\Property(property="jobeUser", type="string", description="Name of reserved JOBE user", default="jobe00"),
+ *       @OA\Property(property="randomValue", type="string", description="Random value that was returned by server when reserving port", default="188f22c21baf49355ca26d3ed3da0bb8")
+ *    ) 
+ */
+
+
 class Restapi extends REST_Controller {
     protected $languages = array();
 
@@ -456,19 +465,9 @@ class Restapi extends REST_Controller {
     //      FREE_PORTS
     // **********************
     /**
-     * @OA\Post(path="/jobe/index.php/restapi/free_ports", tags={"RestApi"}, position=1,
+     * @OA\Get(path="/jobe/index.php/restapi/free_ports", tags={"RestApi"}, position=1,
      *  security={{"ApiKeyAuthentication":{}}},
-     *  @OA\RequestBody(
-     *       @OA\MediaType(
-     *           mediaType="application/json",
-     *           @OA\Schema( 
-     *              @OA\Property(property="port", type="integer", description="Port that was assigned to user"),
-     *              @OA\Property(property="jobeUser", type="string", description="Name of reserved JOBE user"),
-     *              @OA\Property(property="randomValue", type="string", description="Random value that was returned by server when reserving port")
-     *          )    
-     *       )
-     *   ),
-     * @OA\Response (response="200", description="Success"),
+     * @OA\Response (response="200", description="Success", @OA\JsonContent(ref="#/components/schemas/Credentials")),
      * @OA\Response (response="403", description="Access denied", @OA\JsonContent(ref="#/components/schemas/Unauthorized"))
      *  
      * )
@@ -476,14 +475,14 @@ class Restapi extends REST_Controller {
     // Function checks if all ports are used and removes reservations that has expired (1h)
     // Checks if we already have reservation for API KEY
     // If not it reserves PORT (and JOBE user) for this API KEY and returns credentials (port, jobeUser, randomValue)
-    public function free_ports_post() {
+    public function free_ports_get() {
         try {
             $apiKey = null;
             $isOldUser = false;
 
-            $port = $this->post("port");
-            $randomValue = $this->post("randomValue");
-            $jobeUser = $this->post("jobeUser");
+            $port = FALSE;
+            $randomValue = FALSE;
+            $jobeUser = FALSE;
 
             // Check if all ports are used and remove those with expired reservation
             $array = $this->findAndRemoveExpiredPortReservations();
