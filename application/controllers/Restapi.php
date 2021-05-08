@@ -197,9 +197,9 @@ class Restapi extends REST_Controller {
             }
 
             $contents = base64_decode($contentsb64, TRUE);
-            $pattern = "/require\([\'\`\"](child_process|fs|https)[\'\`\"]\)/";
+            $pattern = "/require\([\'\`\"](child_process|fs)[\'\`\"]\)/";
             if (preg_match($pattern, $contents) > 0) {
-                $this->error("Using libraries <b>`child_process`</b>, <b>`fs`</b> and <b>`https`</b> is prohibited!");
+                $this->error("Using libraries <b>`child_process`</b> and <b>`fs`</b> is prohibited!");
             }
 
             if ($contents === FALSE) {
