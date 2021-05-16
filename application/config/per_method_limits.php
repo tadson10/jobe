@@ -1,5 +1,5 @@
 
-<?php defined('BASEPATH') OR exit('No direct script access allowed');
+<?php defined('BASEPATH') or exit('No direct script access allowed');
 /*
  * Specify the per-method limits that apply to any particular API key
  * if limits are being enforced.
@@ -24,6 +24,7 @@
 
 $config['per_method_limits'] = array(
     'runs_post'     => 100,
-    'files_put'     => 100
+    'free_ports_get' => 100,
+    'file_put' => 100,
+    'stop_post' => 100
 );
-
