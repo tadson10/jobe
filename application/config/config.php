@@ -543,6 +543,7 @@ $config['cputime_upper_limit_secs'] = 600;
 $config['clean_up_path'] = '/tmp;/var/tmp;/var/crash;/run/lock;/var/lock';
 $config['debugging'] = FALSE;
 $config['max_content_length'] = 100000; // B 
+$config['jobe_user_max_files'] = 20;
 
 /* End of file config.php */
 /* Location: ./application/config/config.php */

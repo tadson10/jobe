@@ -176,6 +176,8 @@ class Restapi extends REST_Controller {
     // Put (i.e. create or update) a file
     public function file_put($fileId = FALSE) {
         try {
+            global $CI;
+
             // Check PORT reservation
             $port = $this->put("port", FALSE);
             $randomValue = $this->put("randomValue", FALSE);
@@ -207,9 +209,21 @@ class Restapi extends REST_Controller {
             }
 
             $dir = $jobeUser . "_" . $port . "_" . $randomValue;
+
             // All files except `app.js` are saved in /public
-            if ($fileId != "app.js")
+            if ($fileId != "app.js") {
                 $dir = $dir . "/public";
+
+                // Count files
+                if (!file_exists('/home/jobe/runs/' . $dir . '/' . $fileId)) {
+                    $count = count(glob('/home/jobe/runs/' . $dir . "/*"));
+
+                    $maxFiles = $CI->config->item('jobe_user_max_files') - 1;
+                    if ($count >= $maxFiles) {
+                        $this->error("You have reached maximum number of saved files per user!", 500);
+                    }
+                }
+            }
 
             if (FileCache::save_file($fileId, $contents, $dir) === FALSE) {
                 $this->error("Failed to save file <strong>$fileId</strong>.", 500);
